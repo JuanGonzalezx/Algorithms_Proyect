@@ -1,0 +1,80 @@
+// Gramática para pseudocódigo basada en las especificaciones del proyecto
+// Símbolos especiales: 🡨 (asignación), ► (comentarios)
+
+%import common.CNAME -> NAME
+%import common.SIGNED_NUMBER -> NUMBER
+%import common.WS
+%ignore WS
+%ignore /►.*(?=\n)?/   // Comentarios con ►
+
+// Punto de entrada
+start: statement+
+
+// Declaraciones principales
+statement: procedure_def
+         | for_loop
+         | while_loop
+         | repeat_loop
+         | if_statement
+         | assignment
+         | call_statement
+         | return_statement
+         | "accion" -> action_statement
+
+// Definición de procedimiento
+procedure_def: NAME "(" [parameter_list] ")" "begin" statement* "end"
+parameter_list: parameter ("," parameter)*
+parameter: NAME
+         | NAME "[" [NUMBER ".." NUMBER] "]"  // Arrays
+         | "Clase" NAME                       // Objetos
+
+// Estructuras de control
+for_loop: "for" NAME "🡨" expression "to" expression "do" "begin" statement* "end"
+
+while_loop: "while" "(" condition ")" "do" "begin" statement* "end"
+
+repeat_loop: "repeat" statement* "until" "(" condition ")"
+
+if_statement: "if" "(" condition ")" "then" "begin" statement* "end" ["else" "begin" statement* "end"]
+
+// Asignaciones y llamadas
+assignment: NAME "🡨" expression
+          | NAME "." NAME "🡨" expression     // Asignación a campo de objeto
+          | NAME "[" expression "]" "🡨" expression  // Asignación a array
+
+call_statement: "CALL" NAME "(" [argument_list] ")"
+
+return_statement: "return" expression
+
+// Argumentos y expresiones
+argument_list: expression ("," expression)*
+
+?expression: or_expr
+
+?or_expr: and_expr ("or" and_expr)*
+
+?and_expr: not_expr ("and" not_expr)*
+
+?not_expr: "not" not_expr | comparison
+
+?comparison: arith_expr (comp_op arith_expr)*
+comp_op: "<" | ">" | "≤" | "≥" | "=" | "≠" | "<=" | ">=" | "==" | "!="
+
+?arith_expr: term (("+"|"-") term)*
+
+?term: factor (("*"|"/"|"mod"|"div") factor)*
+
+?factor: NUMBER -> number
+       | NAME -> variable
+       | NAME "." NAME -> field_access
+       | NAME "[" expression "]" -> array_access
+       | NAME "(" [argument_list] ")" -> function_call
+       | "(" expression ")"
+       | "┌" expression "┐" -> ceiling
+       | "└" expression "┘" -> floor
+       | "T" -> true_value
+       | "F" -> false_value
+       | "NULL" -> null_value
+
+// Condiciones (alias para expresiones booleanas)
+condition: expression
