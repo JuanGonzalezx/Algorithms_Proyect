@@ -1,0 +1,34 @@
+# Carpetas de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Entornos virtuales
+venv/
+ENV/
+env/
+.venv/
+
+# Configuración local
+*.env
+*.local
+*.log
+
+# Archivos de VS Code
+.vscode/
+.history/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de pruebas/coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Dependencias descargadas
+*.egg-info/
+dist/
+build/
