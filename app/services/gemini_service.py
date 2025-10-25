@@ -9,10 +9,16 @@ logger = logging.getLogger(__name__)
 ARROW = "🡨"  # U+1F86A
 class GeminiService:
     def __init__(self):
-        """Inicializa el servicio de Gemini con la API key"""
+        """Inicializa el servicio de Gemini con la API key desde .env"""
+        # La API key se lee automáticamente desde el archivo .env mediante python-decouple
+        if not settings.GEMINI_API_KEY:
+            raise EnvironmentError(
+                "GEMINI_API_KEY no definida. Por favor, configura la variable GEMINI_API_KEY en el archivo .env"
+            )
         genai.configure(api_key=settings.GEMINI_API_KEY)
         # Modelo vigente
         self.model = genai.GenerativeModel("gemini-2.5-pro")
+        logger.info("Servicio Gemini inicializado correctamente")
 
     async def normalize_to_pseudocode(self, natural_language: str) -> str:
         """
@@ -50,6 +56,35 @@ RESPUESTA:
         except Exception as e:
             logger.error(f"Error al normalizar con Gemini: {e}")
             raise Exception(f"Error en la normalización: {str(e)}")
+
+    async def generate_python_code(self, natural_language: str) -> str:
+        """
+        Genera una implementación en Python a partir de la descripción en lenguaje natural.
+        La respuesta debe ser SOLO el código Python (sin explicaciones ni markdown).
+        """
+        prompt = f"""
+Eres un asistente que convierte descripciones en implementaciones en Python.
+
+Requisitos:
+- Devuelve SOLO código Python válido; no añadas explicaciones, ni títulos, ni Markdown.
+- Define una o más funciones/classes necesarias para implementar la descripción.
+- Añade un docstring breve en la función principal si procede.
+- Evita entradas interactivas (no input()).
+- Si el algoritmo usa estructuras de datos, usa construcciones estándar de Python.
+
+DESCRIPCIÓN:
+{natural_language}
+
+RESPUESTA:
+(Solo el código Python, sin explicaciones, sin ```)
+"""
+        try:
+            raw = await self._generate_content(prompt)
+            # A veces Gemini devuelve texto con contenido adicional; limpiamos espacios extra
+            return raw.strip()
+        except Exception as e:
+            logger.error(f"Error al generar Python con Gemini: {e}")
+            raise Exception(f"Error en la generación de código: {str(e)}")
 
     
 
