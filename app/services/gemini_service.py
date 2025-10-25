@@ -30,12 +30,12 @@ class GeminiService:
 Convierte la siguiente descripción en pseudocódigo siguiendo EXACTAMENTE esta gramática:
 
 REGLAS PRINCIPALES:
-- Procedimientos: nombre_procedimiento(parametros) begin ... end
+- Procedimientos: nombre_procedimiento(parametros) \nbegin ... end
 - Asignaciones: variable {ARROW} valor
-- FOR: for variable {ARROW} inicio to fin do begin ... end
-- WHILE: while (condicion) do begin ... end
+- FOR: for variable {ARROW} inicio to fin do \nbegin ... end
+- WHILE: while (condicion) do \nbegin ... end
 - REPEAT: repeat ... until (condicion)
-- IF: if (condicion) then begin ... end else begin ... end
+- IF: if (condicion) then \nbegin ... end else \nbegin ... end
 - Comentarios inician con ►
 - Llamadas: CALL nombre_funcion(parametros)
 - Acceso a arreglos: A[i], subarreglos: A[1..j]
