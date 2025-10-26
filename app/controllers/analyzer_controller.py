@@ -3,10 +3,11 @@ from pydantic import BaseModel
 import logging
 from pathlib import Path
 import datetime
-from typing import Optional
+from typing import Optional, Literal
 
 from app.services.gemini_service import gemini_service
 from app.models.schemas import InputRequest, PseudocodeResponse, InputType
+from app.services.ast_service import build_ast
 
 logger = logging.getLogger(__name__)
 
@@ -116,3 +117,68 @@ async def generate_code(req: InputRequest):
     except Exception as e:
         logger.error(f"Error generando código con Gemini: {e}")
         raise HTTPException(status_code=500, detail=f"Error generando código: {str(e)}")
+
+
+# ============================================================================
+# NUEVO ENDPOINT: AST
+# ============================================================================
+
+class ASTRequest(BaseModel):
+    """Request para construcción de AST"""
+    content: str
+    from_lang: Literal["python", "pseudocode"] = "python"
+
+
+@router.post("/ast")
+async def build_ast_endpoint(req: ASTRequest):
+    """
+    Construye un AST (Representación Intermedia) desde código Python o pseudocódigo.
+    
+    Este endpoint parsea código fuente y genera nuestro IR para análisis de complejidad.
+    
+    Args:
+        content: Código fuente (Python o pseudocódigo)
+        from_lang: Lenguaje fuente ("python" o "pseudocode")
+        
+    Returns:
+        JSON con el AST en formato IR
+        
+    Errors:
+        400: Sintaxis no soportada o from_lang inválido
+        500: Error interno
+    """
+    if not req.content or not req.content.strip():
+        raise HTTPException(status_code=400, detail="'content' es requerido y no puede estar vacío")
+    
+    try:
+        ast_dict = build_ast(req.content, req.from_lang)
+        return {"ast": ast_dict}
+    
+    except ValueError as e:
+        # from_lang inválido
+        logger.warning(f"Invalid from_lang: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    except NotImplementedError as e:
+        # Sintaxis no soportada
+        logger.info(f"Unsupported syntax: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"unsupported_syntax: {str(e)}"
+        )
+    
+    except SyntaxError as e:
+        # Error de sintaxis Python
+        logger.info(f"Python syntax error: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"syntax_error: {str(e)}"
+        )
+    
+    except Exception as e:
+        # Error inesperado
+        logger.error(f"Internal error building AST: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"internal_error: An unexpected error occurred"
+        )

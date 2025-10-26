@@ -72,6 +72,15 @@ Requisitos:
 - Evita entradas interactivas (no input()).
 - Si el algoritmo usa estructuras de datos, usa construcciones estándar de Python.
 
+RESTRICCIONES IMPORTANTES:
+- NO uses tuple unpacking en asignaciones (NO: a, b = b, a)
+- Para intercambiar valores, usa una variable temporal:
+  temp = a
+  a = b
+  b = temp
+- NO uses asignaciones múltiples (NO: x = y = z = 0)
+- Usa asignaciones simples una por una
+
 DESCRIPCIÓN:
 {natural_language}
 

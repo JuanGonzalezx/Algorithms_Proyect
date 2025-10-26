@@ -123,6 +123,7 @@ INFO:     Application startup complete.
 | `/api/v1/normalize` | POST | 📝 Convierte lenguaje natural a pseudocódigo | `InputRequest` |
 | `/api/v1/generate-code` | POST | 🐍 Genera código Python (sin guardar) | `InputRequest` |
 | `/api/v1/generate` | POST | 💾 Genera código Python y lo guarda | `GenerateRequest` |
+| `/api/v1/ast` | POST | 🌳 **Construye AST/IR desde Python o pseudocódigo** | `ASTRequest` |
 
 ---
 
@@ -226,6 +227,144 @@ curl -X POST "http://localhost:8000/api/v1/generate" \
     "filename": "fibonacci.py"
   }'
 ```
+
+**Python:**
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8000/api/v1/generate",
+    json={
+        "description": "Función recursiva para calcular Fibonacci",
+        "filename": "fibonacci.py"
+    }
+)
+print(f"Guardado en: {response.json()['saved_path']}")
+```
+
+**Respuesta:**
+```json
+{
+  "saved_path": "C:\\...\\docs\\ejemplos\\algoritmos_guardados\\fibonacci.py",
+  "code": "# Prompt:\n# Función recursiva para calcular Fibonacci\n\ndef fibonacci(n):\n    ..."
+}
+```
+
+---
+
+#### 5. 🌳 Construcción de AST (Python o Pseudocódigo) **[NUEVO]**
+**Descripción**: Parsea código fuente (Python o pseudocódigo) y genera un AST normalizado en formato JSON (Representación Intermedia unificada).
+
+**Desde Python:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/ast" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "def suma(a, b):\n    return a + b",
+    "from_lang": "python"
+  }'
+```
+
+**Desde Pseudocódigo:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/ast" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "procedimiento suma(a, b)\nbegin\n    return a + b\nend",
+    "from_lang": "pseudocode"
+  }'
+```
+
+**Python:**
+```python
+import requests
+
+# Parsear Python
+response = requests.post(
+    "http://localhost:8000/api/v1/ast",
+    json={
+        "content": """
+def binary_search(arr, target, n):
+    left = 0
+    right = n - 1
+    while left <= right:
+        mid = (left + right) // 2
+        if arr[mid] == target:
+            return mid
+        if arr[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return -1
+        """,
+        "from_lang": "python"
+    }
+)
+print(response.json())
+
+# Parsear pseudocódigo
+response_psc = requests.post(
+    "http://localhost:8000/api/v1/ast",
+    json={
+        "content": """
+procedimiento suma_array(arr, n)
+begin
+    suma 🡨 0
+    for i 🡨 0 to n - 1 do
+    begin
+        suma 🡨 suma + arr[i]
+    end
+    return suma
+end
+        """,
+        "from_lang": "pseudocode"
+    }
+)
+print(response_psc.json())
+```
+
+**Respuesta (Python y pseudocódigo generan la misma estructura IR):**
+```json
+{
+  "type": "Program",
+  "functions": [
+    {
+      "type": "Function",
+      "name": "suma",
+      "params": [
+        {"name": "a"},
+        {"name": "b"}
+      ],
+      "body": {
+        "type": "Block",
+        "statements": [
+          {
+            "type": "Return",
+            "value": {
+              "type": "BinOp",
+              "op": "+",
+              "left": {"type": "Var", "name": "a"},
+              "right": {"type": "Var", "name": "b"}
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+**⚠️ Restricciones del parser Python:**
+- ❌ No soporta tuple unpacking: `a, b = b, a`
+- ❌ No soporta asignación múltiple: `a = b = 0`
+- ❌ No soporta `range()` con step: `range(0, 10, 2)`
+- ❌ No soporta comparaciones encadenadas: `0 < x < 10`
+
+Ver [`RESTRICCIONES_AST.md`](RESTRICCIONES_AST.md) para detalles completos.
+
+**📖 Documentación adicional:**
+- Parser de pseudocódigo: [`PARSER_PSEUDOCODIGO.md`](PARSER_PSEUDOCODIGO.md)
+- Implementación AST: [`IMPLEMENTACION_AST.md`](IMPLEMENTACION_AST.md)
 
 **Python:**
 ```python

@@ -7,11 +7,29 @@
 %ignore WS
 %ignore /►.*(?=\n)?/   // Comentarios con ►
 
+// Terminals para operadores
+LESSTHAN: "<"
+MORETHAN: ">"
+LEQ: "≤" | "<="
+GEQ: "≥" | ">="
+EQUAL: "="| "=="
+NOTEQUAL: "≠" | "!="
+PLUS: "+"
+MINUS: "-"
+STAR: "*"
+SLASH: "/"
+DIV: "div"
+MOD: "mod"
+AND: "and"
+OR: "or"
+NOT: "not"
+
 // Punto de entrada
 start: statement+
 
 // Declaraciones principales
 statement: procedure_def
+         | var_declaration
          | for_loop
          | while_loop
          | repeat_loop
@@ -21,8 +39,12 @@ statement: procedure_def
          | return_statement
          | "accion" -> action_statement
 
+// Declaración de variables
+var_declaration: NAME ("," NAME)*
+
 // Definición de procedimiento
-procedure_def: NAME "(" [parameter_list] ")" "begin" statement* "end"
+procedure_def: "procedimiento" NAME "(" [parameter_list] ")" "begin" statement* "end"
+             | NAME "(" [parameter_list] ")" "begin" statement* "end"  // Sin palabra "procedimiento"
 parameter_list: parameter ("," parameter)*
 parameter: NAME
          | NAME "[" [NUMBER ".." NUMBER] "]"  // Arrays
@@ -31,16 +53,21 @@ parameter: NAME
 // Estructuras de control
 for_loop: "for" NAME "🡨" expression "to" expression "do" "begin" statement* "end"
 
-while_loop: "while" "(" condition ")" "do" "begin" statement* "end"
+while_loop: "while" condition "do" "begin" statement* "end"
 
-repeat_loop: "repeat" statement* "until" "(" condition ")"
+repeat_loop: "repeat" "begin" statement* "end" "until" condition
 
-if_statement: "if" "(" condition ")" "then" "begin" statement* "end" ["else" "begin" statement* "end"]
+if_statement: "if" condition "then" then_part ["else" else_part]
+
+then_part: "begin" statement* "end" | statement
+else_part: "begin" statement* "end" | statement
 
 // Asignaciones y llamadas
-assignment: NAME "🡨" expression
-          | NAME "." NAME "🡨" expression     // Asignación a campo de objeto
-          | NAME "[" expression "]" "🡨" expression  // Asignación a array
+assignment: lvalue "🡨" expression
+
+lvalue: NAME "[" expression "]"  // Array element
+      | NAME "." NAME             // Object field
+      | NAME                      // Simple variable
 
 call_statement: "CALL" NAME "(" [argument_list] ")"
 
@@ -53,22 +80,23 @@ argument_list: expression ("," expression)*
 
 ?or_expr: and_expr ("or" and_expr)*
 
-?and_expr: not_expr ("and" not_expr)*
+?and_expr: not_expr (AND not_expr)*
 
-?not_expr: "not" not_expr | comparison
+?not_expr: NOT not_expr | comparison
 
-?comparison: arith_expr (comp_op arith_expr)*
-comp_op: "<" | ">" | "≤" | "≥" | "=" | "≠" | "<=" | ">=" | "==" | "!="
+comparison: arith_expr (LESSTHAN | MORETHAN | LEQ | GEQ | EQUAL | NOTEQUAL) arith_expr
+          | arith_expr
 
-?arith_expr: term (("+"|"-") term)*
+arith_expr: term ((PLUS|MINUS) term)*
 
-?term: factor (("*"|"/"|"mod"|"div") factor)*
+term: factor ((STAR|SLASH|MOD|DIV) factor)*
 
 ?factor: NUMBER -> number
        | NAME -> variable
        | NAME "." NAME -> field_access
-       | NAME "[" expression "]" -> array_access
+       | NAME "[" expression "]" ("[" expression "]")* -> array_access  // Soporte multi-dimensional
        | NAME "(" [argument_list] ")" -> function_call
+       | "[" [argument_list] "]" -> array_literal  // Array literals
        | "(" expression ")"
        | "┌" expression "┐" -> ceiling
        | "└" expression "┘" -> floor
