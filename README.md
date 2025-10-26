@@ -33,19 +33,30 @@ Algorithms_Proyect/
 │   ├── controllers/
 │   │   ├── __init__.py
 │   │   └── analyzer_controller.py   # 🎮 Endpoints de la API
-│   ├── core/                        # 🧠 Lógica central (futuro)
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── py_ast_builder.py        # 🐍 Parser Python → IR
+│   │   └── psc_parser.py            # 📝 Parser Pseudocódigo → IR
 │   ├── grammar/
-│   │   └── pseudocode.lark          # 📝 Gramática formal del pseudocódigo
+│   │   └── pseudocode.lark          # 📝 Gramática formal EBNF
 │   ├── models/
-│   │   ├── ast_nodes.py             # 🌳 Nodos del AST
-│   │   └── schemas.py               # 📋 Modelos Pydantic
+│   │   ├── ast_nodes.py             # 🌳 Nodos del AST/IR (dataclasses)
+│   │   └── schemas.py               # 📋 Modelos Pydantic (API)
 │   └── services/
 │       ├── __init__.py
-│       └── gemini_service.py        # 🤖 Integración con Gemini AI
-└── docs/
-    └── ejemplos/
-        ├── ejemplos_prueba.md       # 📖 Ejemplos de uso
-        └── algoritmos_guardados/    # 💾 Códigos generados (auto-creado)
+│       ├── gemini_service.py        # 🤖 Integración con Gemini AI
+│       └── ast_service.py           # 🌳 Servicio de construcción AST
+├── tests/
+│   ├── test_ast_builder.py          # ✅ Tests parser Python (7 tests)
+│   └── test_psc_parser.py           # ✅ Tests parser Pseudocódigo (8 tests)
+├── docs/
+│   ├── PARSER_PSEUDOCODIGO.md       # 📖 Documentación parser PSC
+│   ├── RESTRICCIONES_AST.md         # 📖 Restricciones Python
+│   ├── IMPLEMENTACION_AST.md        # 📖 Detalles implementación
+│   └── ejemplos/
+│       ├── ejemplos_prueba.md       # 📖 Ejemplos de uso
+│       └── algoritmos_guardados/    # 💾 Códigos generados (auto-creado)
+└── test_*.py                        # 🧪 Scripts de prueba manual
 ```
 
 ## 🔧 Instalación
@@ -252,8 +263,17 @@ print(f"Guardado en: {response.json()['saved_path']}")
 
 ---
 
-#### 5. 🌳 Construcción de AST (Python o Pseudocódigo) **[NUEVO]**
+#### 5. 🌳 Construcción de AST (Python o Pseudocódigo) **[ACTUALIZADO]**
 **Descripción**: Parsea código fuente (Python o pseudocódigo) y genera un AST normalizado en formato JSON (Representación Intermedia unificada).
+
+**🆕 Características del Parser de Pseudocódigo:**
+- ✅ **Sintaxis flexible**: Soporta `procedimiento` o directamente `NombreFuncion(params)`
+- ✅ **Declaraciones de variables**: `i, j, min_index, temp` (ignoradas en AST)
+- ✅ **Comentarios**: `► Este es un comentario` (ignorados en parsing)
+- ✅ **Asignaciones a arrays**: `A[i] 🡨 valor` o `A[i][j] 🡨 valor`
+- ✅ **Paréntesis en condiciones**: `if (A[j] < A[min_index]) then`
+- ✅ **Bloques begin...end**: Múltiples statements correctamente agrupados
+- ✅ **IR unificada**: Python y pseudocódigo generan la misma estructura
 
 **Desde Python:**
 ```bash
@@ -265,7 +285,7 @@ curl -X POST "http://localhost:8000/api/v1/ast" \
   }'
 ```
 
-**Desde Pseudocódigo:**
+**Desde Pseudocódigo (con "procedimiento"):**
 ```bash
 curl -X POST "http://localhost:8000/api/v1/ast" \
   -H "Content-Type: application/json" \
@@ -275,11 +295,21 @@ curl -X POST "http://localhost:8000/api/v1/ast" \
   }'
 ```
 
+**Desde Pseudocódigo (sin "procedimiento"):**
+```bash
+curl -X POST "http://localhost:8000/api/v1/ast" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "SelectionSort(A)\nbegin\n    n 🡨 length(A)\n    for i 🡨 1 to n-1 do\n    begin\n        ► Código aquí\n    end\nend",
+    "from_lang": "pseudocode"
+  }'
+```
+
 **Python:**
 ```python
 import requests
 
-# Parsear Python
+# Ejemplo 1: Parsear Python
 response = requests.post(
     "http://localhost:8000/api/v1/ast",
     json={
@@ -302,19 +332,37 @@ def binary_search(arr, target, n):
 )
 print(response.json())
 
-# Parsear pseudocódigo
+# Ejemplo 2: Parsear pseudocódigo (normalizado por Gemini)
 response_psc = requests.post(
     "http://localhost:8000/api/v1/ast",
     json={
         "content": """
-procedimiento suma_array(arr, n)
+SelectionSort(A)
 begin
-    suma 🡨 0
-    for i 🡨 0 to n - 1 do
+    n 🡨 length(A)
+    i, j, min_index, temp
+
+    ► Recorre el arreglo
+    for i 🡨 1 to n - 1 do
     begin
-        suma 🡨 suma + arr[i]
+        min_index 🡨 i
+        
+        for j 🡨 i + 1 to n do
+        begin
+            if (A[j] < A[min_index]) then
+            begin
+                min_index 🡨 j
+            end
+        end
+        
+        ► Intercambia elementos
+        if (min_index ≠ i) then
+        begin
+            temp 🡨 A[i]
+            A[i] 🡨 A[min_index]
+            A[min_index] 🡨 temp
+        end
     end
-    return suma
 end
         """,
         "from_lang": "pseudocode"
@@ -393,7 +441,7 @@ print(f"Guardado en: {response.json()['saved_path']}")
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Usuario envía descripción                     │
-│              (Lenguaje natural o pseudocódigo)                   │
+│         (Lenguaje natural, pseudocódigo o código Python)         │
 └────────────────────────────┬────────────────────────────────────┘
                              │
                              ▼
@@ -408,54 +456,182 @@ print(f"Guardado en: {response.json()['saved_path']}")
 │              - /normalize → Convertir a pseudocódigo             │
 │              - /generate-code → Generar Python                   │
 │              - /generate → Generar y guardar                     │
+│              - /ast → Construir AST/IR (NUEVO)                   │
 └────────────────────────────┬────────────────────────────────────┘
                              │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│               Gemini Service (services/)                         │
-│          - normalize_to_pseudocode()                             │
-│          - generate_python_code()                                │
-│          Usa prompts especializados + Gemini 2.5 Pro             │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                  Google Gemini AI API                            │
-│           Procesa y genera respuesta inteligente                 │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
+                    ┌────────┴────────┐
+                    ▼                 ▼
+          ┌──────────────────┐  ┌─────────────────┐
+          │ Gemini Service   │  │  AST Service    │
+          │ (services/)      │  │  (services/)    │
+          │                  │  │                 │
+          │ - normalize()    │  │ - Python → IR   │
+          │ - generate()     │  │ - Pseudocode→IR │
+          └────────┬─────────┘  └────────┬────────┘
+                   │                     │
+                   ▼                     ▼
+          ┌──────────────────┐  ┌─────────────────┐
+          │ Google Gemini AI │  │  Lark Parser    │
+          │     (2.5 Pro)    │  │  + Transformer  │
+          └────────┬─────────┘  └────────┬────────┘
+                   │                     │
+                   └──────────┬──────────┘
+                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │              Respuesta al usuario (JSON)                         │
 │      - Pseudocódigo estructurado (con 🡨 para asignaciones)       │
 │      - Código Python ejecutable                                  │
 │      - Archivo guardado (opcional)                               │
+│      - AST/IR unificada en JSON (NUEVO)                          │
 └─────────────────────────────────────────────────────────────────┘
+```
+
+### Flujo de Parsing AST
+
+```
+┌────────────────┐
+│ Código fuente  │
+│ (Python o PSC) │
+└───────┬────────┘
+        │
+        ▼
+┌────────────────────────┐
+│  AST Service           │
+│  - Detecta lenguaje    │
+│  - Selecciona parser   │
+└───────┬────────────────┘
+        │
+   ┌────┴────┐
+   ▼         ▼
+┌──────┐  ┌──────────┐
+│Python│  │Pseudocode│
+│Parser│  │  Parser  │
+└──┬───┘  └────┬─────┘
+   │           │
+   │  ┌────────┴───────────────────┐
+   │  │ Lark Grammar               │
+   │  │ - Procedimientos           │
+   │  │ - Declaraciones variables  │
+   │  │ - Asignaciones (lvalue)    │
+   │  │ - Estructuras de control   │
+   │  │ - Comentarios (ignorados)  │
+   │  └────────┬───────────────────┘
+   │           │
+   │           ▼
+   │  ┌───────────────────┐
+   │  │ PseudocodeToIR    │
+   │  │ (Transformer)     │
+   │  │ - then_part()     │
+   │  │ - else_part()     │
+   │  │ - lvalue()        │
+   │  │ - var_declaration │
+   │  └────────┬──────────┘
+   │           │
+   └───────┬───┘
+           ▼
+┌──────────────────────┐
+│  Representación      │
+│  Intermedia (IR)     │
+│  - Program           │
+│  - Function          │
+│  - Block, Stmt       │
+│  - Expr (BinOp, etc) │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  JSON Response       │
+│  (Unified AST)       │
+└──────────────────────┘
 ```
 
 ## 📖 Gramática de Pseudocódigo Soportada
 
-El sistema genera pseudocódigo siguiendo estas reglas formales:
+El sistema genera pseudocódigo siguiendo estas reglas formales (ver [`PARSER_PSEUDOCODIGO.md`](docs/PARSER_PSEUDOCODIGO.md) para detalles completos).
 
 ### Estructuras Básicas:
 
 | Estructura | Sintaxis | Ejemplo |
 |------------|----------|---------|
-| **Procedimiento** | `nombre(params) begin ... end` | `factorial(n) begin ... end` |
+| **Procedimiento** | `procedimiento nombre(params) begin ... end` o `nombre(params) begin ... end` | `factorial(n) begin ... end` |
 | **Asignación** | `variable 🡨 valor` | `suma 🡨 0` |
+| **Asignación Array** | `array[indice] 🡨 valor` | `A[i] 🡨 10` |
+| **Declaración vars** | `var1, var2, var3` | `i, j, temp` |
 | **For Loop** | `for var 🡨 inicio to fin do begin ... end` | `for i 🡨 1 to n do begin ... end` |
-| **While Loop** | `while (condicion) do begin ... end` | `while (i < n) do begin ... end` |
-| **Repeat Until** | `repeat ... until (condicion)` | `repeat ... until (suma > 100)` |
-| **Condicional** | `if (cond) then begin ... end else begin ... end` | `if (x > 0) then begin ... end` |
-| **Llamada** | `CALL funcion(params)` | `CALL ordenar(A, n)` |
-| **Arreglos** | `A[i]` o `A[i..j]` | `A[1]`, `A[1..n]` |
+| **While Loop** | `while condicion do begin ... end` | `while (i < n) do begin ... end` |
+| **Repeat Until** | `repeat begin ... end until condicion` | `repeat begin ... end until (suma > 100)` |
+| **Condicional** | `if condicion then begin ... end [else begin ... end]` | `if (x > 0) then begin ... end` |
+| **Llamada** | `CALL funcion(params)` o `funcion(params)` | `CALL ordenar(A, n)` |
+| **Arreglos** | `A[i]` o `A[i][j]` (multi-dimensional) | `A[1]`, `matriz[i][j]` |
 | **Comentario** | `► texto` | `► Este es un comentario` |
 | **Booleanos** | `T`, `F` | `esPar 🡨 T` |
 
 ### Operadores:
 - **Aritméticos**: `+`, `-`, `*`, `/`, `mod`, `div`
 - **Lógicos**: `and`, `or`, `not`
-- **Relacionales**: `<`, `>`, `≤`, `≥`, `=`, `≠`
+- **Relacionales**: `<`, `>`, `≤`, `>=`, `=`, `≠`, `!=`, `==`
+
+### 🆕 Características del Parser:
+
+#### ✅ Sintaxis Flexible
+```pseudocode
+# Con palabra clave "procedimiento"
+procedimiento buscar(A, n)
+begin
+    ...
+end
+
+# Sin palabra clave (compatible con output de normalize)
+buscar(A, n)
+begin
+    ...
+end
+```
+
+#### ✅ Declaraciones de Variables
+```pseudocode
+procedimiento ejemplo()
+begin
+    i, j, k, temp    ► Declaración (ignorada en AST)
+    suma 🡨 0         ► Asignación real
+end
+```
+
+#### ✅ Asignaciones a Arrays
+```pseudocode
+# Arrays unidimensionales
+A[i] 🡨 valor
+temp 🡨 A[j]
+
+# Arrays multidimensionales
+matriz[i][j] 🡨 0
+valor 🡨 matriz[x][y]
+```
+
+#### ✅ Paréntesis Opcionales en Condiciones
+```pseudocode
+# Con paréntesis (más legible)
+if (A[j] < A[min_index]) then
+begin
+    min_index 🡨 j
+end
+
+# Sin paréntesis (también válido)
+if A[j] < A[min_index] then
+begin
+    min_index 🡨 j
+end
+```
+
+#### ✅ Comentarios Ignorados
+```pseudocode
+procedimiento ejemplo()
+begin
+    ► Este comentario se ignora en el parsing
+    suma 🡨 0
+    ► Los comentarios no aparecen en el AST
+end
+```
 
 ### Ejemplo Completo:
 ```
@@ -480,6 +656,76 @@ busqueda_binaria(A, n, objetivo) begin
   
   return -1
 end
+```
+
+## 🧪 Testing
+
+El proyecto incluye tests automatizados con pytest para validar el parsing de Python y pseudocódigo.
+
+### Ejecutar Tests
+
+```bash
+# Todos los tests
+pytest tests/ -v
+
+# Solo tests de Python
+pytest tests/test_ast_builder.py -v
+
+# Solo tests de pseudocódigo
+pytest tests/test_psc_parser.py -v
+
+# Con coverage
+pytest tests/ --cov=app --cov-report=html
+```
+
+### Cobertura de Tests
+
+**Python Parser (7 tests):**
+- ✅ `test_sum_array_with_for` - Arrays y loops
+- ✅ `test_binary_search_with_while_if` - While e if anidados
+- ✅ `test_factorial_recursive` - Recursión
+- ✅ `test_unsupported_range_with_step` - Validación de errores
+- ✅ `test_unsupported_chained_comparison` - Validación de errores
+- ✅ `test_invalid_python_syntax` - Manejo de sintaxis inválida
+- ✅ `test_unsupported_tuple_unpacking` - Validación de restricciones
+
+**Pseudocode Parser (8 tests):**
+- ✅ `test_sum_array_with_for` - For loops y arrays
+- ✅ `test_factorial_with_if` - If-else recursivo
+- ✅ `test_binary_search_with_while` - While loops complejos
+- ✅ `test_nested_loops` - Loops anidados
+- ✅ `test_call_statement` - Llamadas a funciones
+- ✅ `test_comparison_operators` - Todos los operadores (`<`, `>`, `<=`, `>=`, `=`, `!=`)
+- ✅ `test_repeat_until` - Repeat-until loops
+- ✅ `test_invalid_pseudocode` - Manejo de errores
+
+**Total: 15/15 tests pasando** ✅
+
+### Ejemplo de Ejecución
+
+```bash
+$ pytest tests/ -v
+
+======================== test session starts =========================
+collected 15 items
+
+tests/test_ast_builder.py::test_sum_array_with_for PASSED      [  6%]
+tests/test_ast_builder.py::test_binary_search_with_while_if PASSED [ 13%]
+tests/test_ast_builder.py::test_factorial_recursive PASSED     [ 20%]
+tests/test_ast_builder.py::test_unsupported_range_with_step PASSED [ 26%]
+tests/test_ast_builder.py::test_unsupported_chained_comparison PASSED [ 33%]
+tests/test_ast_builder.py::test_invalid_python_syntax PASSED   [ 40%]
+tests/test_ast_builder.py::test_unsupported_tuple_unpacking PASSED [ 46%]
+tests/test_psc_parser.py::test_sum_array_with_for PASSED       [ 53%]
+tests/test_psc_parser.py::test_factorial_with_if PASSED        [ 60%]
+tests/test_psc_parser.py::test_binary_search_with_while PASSED [ 66%]
+tests/test_psc_parser.py::test_nested_loops PASSED             [ 73%]
+tests/test_psc_parser.py::test_call_statement PASSED           [ 80%]
+tests/test_psc_parser.py::test_comparison_operators PASSED     [ 86%]
+tests/test_psc_parser.py::test_repeat_until PASSED             [ 93%]
+tests/test_psc_parser.py::test_invalid_pseudocode PASSED       [100%]
+
+======================== 15 passed in 1.2s ==========================
 ```
 
 ## 🧪 Modelos de Datos (Pydantic Schemas)
@@ -544,32 +790,64 @@ Request body para `/generate`:
 - **python-decouple 3.8**: Manejo de variables de entorno
 - **python-multipart 0.0.6**: Soporte para form data
 
-## 🔮 Próximas Fases y Roadmap
+## 🔮 Roadmap y Estado Actual
 
-### Fase 2: Análisis de Complejidad (En desarrollo)
+### ✅ Fase 1: Generación de Código (COMPLETADO)
+- [x] Integración con Gemini 2.5 Pro
+- [x] Endpoint `/normalize` - Natural language → Pseudocódigo
+- [x] Endpoint `/generate-code` - Generación Python
+- [x] Endpoint `/generate` - Generación y guardado automático
+- [x] Gramática formal Lark para pseudocódigo
+- [x] Documentación completa de API con Swagger
+
+### ✅ Fase 1.5: Parsing y AST (COMPLETADO) 
+- [x] Parser Python → IR unificada
+- [x] Parser Pseudocódigo → IR unificada
+- [x] Endpoint `/ast` - Construcción de AST
+- [x] Soporte para declaraciones de variables
+- [x] Soporte para asignaciones a arrays multidimensionales
+- [x] Sintaxis flexible (con/sin `procedimiento`)
+- [x] Manejo de comentarios `►`
+- [x] Tests completos (15/15 passing)
+- [x] Documentación técnica detallada
+
+**Mejoras Recientes del Parser:**
+- ✅ Regla `lvalue` para asignaciones a arrays: `A[i] 🡨 valor`
+- ✅ Reglas `then_part`/`else_part` para separación correcta de bloques
+- ✅ Soporte `var_declaration` para declaraciones: `i, j, k`
+- ✅ Ambas sintaxis: `procedimiento func()` y `func()`
+- ✅ Paréntesis opcionales en condiciones: `if (x > 0)` o `if x > 0`
+
+### 🔄 Fase 2: Análisis de Complejidad (En Progreso)
 - [ ] Implementar visitor pattern para recorrer AST
 - [ ] Calcular complejidades: O(), Ω(), Θ()
 - [ ] Integrar Sympy para resolver recurrencias
 - [ ] Detectar estructuras anidadas y multiplicar complejidades
+- [ ] Análisis de casos: mejor, promedio, peor
+- [ ] Detección de recursión (directa e indirecta)
 
-### Fase 3: Visualización
+### 📋 Fase 3: Visualización (Planeado)
 - [ ] Generar diagramas de flujo con Graphviz
 - [ ] Visualizar árboles de recursión
 - [ ] Timeline de ejecución paso a paso
 - [ ] Gráficas de comparación de complejidades
+- [ ] Export a diferentes formatos (PNG, SVG, PDF)
 
-### Fase 4: Frontend Web
+### 🌐 Fase 4: Frontend Web (Planeado)
 - [ ] Interfaz React/Vue para facilitar uso
 - [ ] Editor de código con syntax highlighting
 - [ ] Vista previa del pseudocódigo generado
 - [ ] Dashboard de análisis de complejidad
+- [ ] Comparador de algoritmos lado a lado
 
-### Mejoras Adicionales
+### 🚀 Mejoras Adicionales (Futuro)
 - [ ] Cache de respuestas de Gemini (Redis)
 - [ ] Sistema de usuarios y autenticación
 - [ ] Historial de algoritmos generados
 - [ ] Exportar a PDF/Markdown
-- [ ] Tests unitarios y de integración
+- [ ] API de traducción entre lenguajes
+- [ ] Sugerencias de optimización
+- [ ] Detección de patrones algorítmicos
 
 ## 🐛 Troubleshooting
 
@@ -638,6 +916,51 @@ python main.py
 # 5. Abrir navegador
 # http://localhost:8000/docs
 ```
+
+---
+
+## 📝 Changelog
+
+### v1.1.0 - Parser de Pseudocódigo Mejorado (Octubre 2025)
+**Nuevas Características:**
+- ✨ Sintaxis flexible: Soporte para `procedimiento func()` y `func()` directamente
+- ✨ Declaraciones de variables: `i, j, k, temp` (parseadas pero ignoradas en AST)
+- ✨ Asignaciones a arrays multi-dimensionales: `matriz[i][j] 🡨 valor`
+- ✨ Paréntesis opcionales en condiciones: `if (x > 0)` o `if x > 0`
+- ✨ Comentarios ignorados correctamente: `► Este es un comentario`
+
+**Mejoras Técnicas:**
+- 🔧 Regla `lvalue` para manejar asignaciones complejas
+- 🔧 Reglas `then_part`/`else_part` para bloques correctos en if-else
+- 🔧 Transformer actualizado para filtrar declaraciones None
+- 🔧 Soporte completo para código generado por `/normalize`
+
+**Tests:**
+- ✅ 15/15 tests pasando (7 Python + 8 Pseudocódigo)
+- ✅ Nuevos tests para SelectionSort completo
+- ✅ Validación de estructuras complejas
+
+**Documentación:**
+- 📖 README actualizado con ejemplos completos
+- 📖 Sección de gramática expandida
+- 📖 Flujos de parsing documentados
+
+### v1.0.0 - AST y Parsing Inicial (Octubre 2025)
+**Lanzamiento Inicial:**
+- 🚀 Endpoint `/api/v1/ast` para construcción de AST
+- 🐍 Parser Python → IR con AST nativo
+- 📝 Parser Pseudocódigo → IR con Lark
+- 🌳 Representación Intermedia unificada (dataclasses)
+- 📋 7 tests Python + 8 tests Pseudocódigo
+- 📖 Documentación completa en `docs/`
+
+**Características:**
+- ✅ Generación con Gemini 2.5 Pro
+- ✅ Normalización lenguaje natural → pseudocódigo
+- ✅ Generación de código Python ejecutable
+- ✅ Guardado automático de algoritmos
+- ✅ API REST completa con FastAPI
+- ✅ Validación con Pydantic
 
 ---
 
