@@ -1,41 +1,24 @@
 """
-Servicio para construcción de AST desde diferentes lenguajes.
-Soporta Python y pseudocódigo.
+Servicio para construcción de AST desde pseudocódigo.
 """
-from typing import Dict, Literal
-from app.core.py_ast_builder import PythonToIR
+from typing import Dict
 from app.core.psc_parser import PseudocodeParser
 
 
-def build_ast(content: str, from_lang: Literal["python", "pseudocode"] = "python") -> Dict:
+def build_ast(content: str, from_lang: str = "pseudocode") -> Dict:
     """
-    Construye AST (IR) desde código fuente.
+    Construye AST (IR) desde pseudocódigo.
     
     Args:
-        content: Código fuente
-        from_lang: Lenguaje fuente ("python" o "pseudocode")
+        content: Pseudocódigo fuente
+        from_lang: Debe ser "pseudocode" (parámetro mantenido por compatibilidad)
         
     Returns:
         Dict con el AST serializado
         
     Raises:
-        ValueError: Si from_lang no es válido
-        SyntaxError: Si el código tiene errores de sintaxis
-        NotImplementedError: Si usa características no soportadas (Python)
-        Exception: Si hay errores de parsing (pseudocode)
+        Exception: Si hay errores de parsing
     """
-    if from_lang == "python":
-        builder = PythonToIR()
-        program = builder.build(content)
-        return program.to_dict()
-    
-    elif from_lang == "pseudocode":
-        parser = PseudocodeParser()
-        program = parser.build(content)
-        return program.to_dict()
-    
-    else:
-        raise ValueError(
-            f"Language '{from_lang}' not supported. "
-            f"Only 'python' and 'pseudocode' are supported."
-        )
+    parser = PseudocodeParser()
+    program = parser.build(content)
+    return program.to_dict()

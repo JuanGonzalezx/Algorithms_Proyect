@@ -120,44 +120,38 @@ async def generate_code(req: InputRequest):
 
 
 # ============================================================================
-# NUEVO ENDPOINT: AST
+# ENDPOINT: AST (Solo Pseudocódigo)
 # ============================================================================
 
 class ASTRequest(BaseModel):
-    """Request para construcción de AST"""
+    """Request para construcción de AST desde pseudocódigo"""
     content: str
-    from_lang: Literal["python", "pseudocode"] = "python"
 
 
 @router.post("/ast")
 async def build_ast_endpoint(req: ASTRequest):
     """
-    Construye un AST (Representación Intermedia) desde código Python o pseudocódigo.
+    Construye un AST (Representación Intermedia) desde pseudocódigo.
     
-    Este endpoint parsea código fuente y genera nuestro IR para análisis de complejidad.
+    Este endpoint parsea pseudocódigo y genera nuestro IR para análisis de complejidad.
     
     Args:
-        content: Código fuente (Python o pseudocódigo)
-        from_lang: Lenguaje fuente ("python" o "pseudocode")
+        content: Pseudocódigo fuente
         
     Returns:
         JSON con el AST en formato IR
         
     Errors:
-        400: Sintaxis no soportada o from_lang inválido
+        400: Sintaxis inválida o no soportada
         500: Error interno
     """
     if not req.content or not req.content.strip():
         raise HTTPException(status_code=400, detail="'content' es requerido y no puede estar vacío")
     
     try:
-        ast_dict = build_ast(req.content, req.from_lang)
+        # Solo pseudocódigo permitido
+        ast_dict = build_ast(req.content, from_lang="pseudocode")
         return {"ast": ast_dict}
-    
-    except ValueError as e:
-        # from_lang inválido
-        logger.warning(f"Invalid from_lang: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
     
     except NotImplementedError as e:
         # Sintaxis no soportada
@@ -167,16 +161,8 @@ async def build_ast_endpoint(req: ASTRequest):
             detail=f"unsupported_syntax: {str(e)}"
         )
     
-    except SyntaxError as e:
-        # Error de sintaxis Python
-        logger.info(f"Python syntax error: {e}")
-        raise HTTPException(
-            status_code=400,
-            detail=f"syntax_error: {str(e)}"
-        )
-    
     except Exception as e:
-        # Error inesperado
+        # Error inesperado (incluyendo parsing errors)
         logger.error(f"Internal error building AST: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,

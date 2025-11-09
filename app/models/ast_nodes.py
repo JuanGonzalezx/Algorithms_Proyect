@@ -14,8 +14,6 @@ from typing import List, Optional, Union, Any, Dict
 @dataclass
 class Expr:
     """Expresión base"""
-    line: int = 0
-    col: int = 0
     
     def to_dict(self) -> Dict[str, Any]:
         """Serializa el nodo a diccionario"""
@@ -30,9 +28,7 @@ class Literal(Expr):
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": "Literal",
-            "value": self.value,
-            "line": self.line,
-            "col": self.col
+            "value": self.value
         }
 
 
@@ -44,9 +40,7 @@ class Var(Expr):
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": "Var",
-            "name": self.name,
-            "line": self.line,
-            "col": self.col
+            "name": self.name
         }
 
 
@@ -60,9 +54,7 @@ class ArrayAccess(Expr):
         return {
             "type": "ArrayAccess",
             "array": self.array.to_dict(),
-            "index": self.index.to_dict(),
-            "line": self.line,
-            "col": self.col
+            "index": self.index.to_dict()
         }
 
 
@@ -78,9 +70,7 @@ class BinOp(Expr):
             "type": "BinOp",
             "op": self.op,
             "left": self.left.to_dict(),
-            "right": self.right.to_dict(),
-            "line": self.line,
-            "col": self.col
+            "right": self.right.to_dict()
         }
 
 
@@ -94,9 +84,7 @@ class UnOp(Expr):
         return {
             "type": "UnOp",
             "op": self.op,
-            "operand": self.operand.to_dict(),
-            "line": self.line,
-            "col": self.col
+            "operand": self.operand.to_dict()
         }
 
 
@@ -112,9 +100,7 @@ class Compare(Expr):
             "type": "Compare",
             "op": self.op,
             "left": self.left.to_dict(),
-            "right": self.right.to_dict(),
-            "line": self.line,
-            "col": self.col
+            "right": self.right.to_dict()
         }
 
 
@@ -128,9 +114,7 @@ class Call(Expr):
         return {
             "type": "Call",
             "name": self.name,
-            "args": [arg.to_dict() for arg in self.args],
-            "line": self.line,
-            "col": self.col
+            "args": [arg.to_dict() for arg in self.args]
         }
 
 
@@ -141,8 +125,6 @@ class Call(Expr):
 @dataclass
 class Stmt:
     """Sentencia base"""
-    line: int = 0
-    col: int = 0
     
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -158,9 +140,7 @@ class Assign(Stmt):
         return {
             "type": "Assign",
             "target": self.target.to_dict(),
-            "value": self.value.to_dict(),
-            "line": self.line,
-            "col": self.col
+            "value": self.value.to_dict()
         }
 
 
@@ -172,9 +152,7 @@ class Return(Stmt):
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": "Return",
-            "value": self.value.to_dict() if self.value else None,
-            "line": self.line,
-            "col": self.col
+            "value": self.value.to_dict() if self.value else None
         }
 
 
@@ -186,9 +164,7 @@ class ExprStmt(Stmt):
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": "ExprStmt",
-            "expr": self.expr.to_dict(),
-            "line": self.line,
-            "col": self.col
+            "expr": self.expr.to_dict()
         }
 
 
@@ -196,15 +172,11 @@ class ExprStmt(Stmt):
 class Block:
     """Bloque de sentencias"""
     statements: List[Stmt] = field(default_factory=list)
-    line: int = 0
-    col: int = 0
     
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": "Block",
-            "statements": [stmt.to_dict() for stmt in self.statements],
-            "line": self.line,
-            "col": self.col
+            "statements": [stmt.to_dict() for stmt in self.statements]
         }
 
 
@@ -220,9 +192,7 @@ class If(Stmt):
             "type": "If",
             "cond": self.cond.to_dict(),
             "then_block": self.then_block.to_dict(),
-            "else_block": self.else_block.to_dict() if self.else_block else None,
-            "line": self.line,
-            "col": self.col
+            "else_block": self.else_block.to_dict() if self.else_block else None
         }
 
 
@@ -236,9 +206,7 @@ class While(Stmt):
         return {
             "type": "While",
             "cond": self.cond.to_dict(),
-            "body": self.body.to_dict(),
-            "line": self.line,
-            "col": self.col
+            "body": self.body.to_dict()
         }
 
 
@@ -258,9 +226,7 @@ class For(Stmt):
             "var": self.var,
             "start": self.start.to_dict(),
             "end": self.end.to_dict(),
-            "body": self.body.to_dict(),
-            "line": self.line,
-            "col": self.col
+            "body": self.body.to_dict()
         }
 
 
@@ -283,17 +249,13 @@ class Function:
     name: str = ""
     params: List[Param] = field(default_factory=list)
     body: Block = field(default_factory=Block)
-    line: int = 0
-    col: int = 0
     
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": "Function",
             "name": self.name,
             "params": [p.to_dict() for p in self.params],
-            "body": self.body.to_dict(),
-            "line": self.line,
-            "col": self.col
+            "body": self.body.to_dict()
         }
 
 

@@ -134,7 +134,7 @@ INFO:     Application startup complete.
 | `/api/v1/normalize` | POST | 📝 Convierte lenguaje natural a pseudocódigo | `InputRequest` |
 | `/api/v1/generate-code` | POST | 🐍 Genera código Python (sin guardar) | `InputRequest` |
 | `/api/v1/generate` | POST | 💾 Genera código Python y lo guarda | `GenerateRequest` |
-| `/api/v1/ast` | POST | 🌳 **Construye AST/IR desde Python o pseudocódigo** | `ASTRequest` |
+| `/api/v1/ast` | POST | 🌳 **Construye AST/IR desde pseudocódigo** | `ASTRequest` |
 
 ---
 
@@ -263,45 +263,43 @@ print(f"Guardado en: {response.json()['saved_path']}")
 
 ---
 
-#### 5. 🌳 Construcción de AST (Python o Pseudocódigo) **[ACTUALIZADO]**
-**Descripción**: Parsea código fuente (Python o pseudocódigo) y genera un AST normalizado en formato JSON (Representación Intermedia unificada).
+#### 5. 🌳 Construcción de AST desde Pseudocódigo **[ACTUALIZADO]**
+**Descripción**: Parsea pseudocódigo y genera un AST normalizado en formato JSON (Representación Intermedia).
 
-**🆕 Características del Parser de Pseudocódigo:**
-- ✅ **Sintaxis flexible**: Soporta `procedimiento` o directamente `NombreFuncion(params)`
+**🎯 Solo Pseudocódigo**: Este endpoint ahora acepta **únicamente pseudocódigo**, no Python.
+
+**🆕 Características del Parser:**
+- ✅ **Sintaxis flexible**: Soporta `procedimiento func()` o directamente `NombreFuncion(params)`
 - ✅ **Declaraciones de variables**: `i, j, min_index, temp` (ignoradas en AST)
 - ✅ **Comentarios**: `► Este es un comentario` (ignorados en parsing)
 - ✅ **Asignaciones a arrays**: `A[i] 🡨 valor` o `A[i][j] 🡨 valor`
 - ✅ **Paréntesis en condiciones**: `if (A[j] < A[min_index]) then`
 - ✅ **Bloques begin...end**: Múltiples statements correctamente agrupados
-- ✅ **IR unificada**: Python y pseudocódigo generan la misma estructura
 
-**Desde Python:**
+**Pseudocódigo Simple:**
 ```bash
 curl -X POST "http://localhost:8000/api/v1/ast" \
   -H "Content-Type: application/json" \
   -d '{
-    "content": "def suma(a, b):\n    return a + b",
-    "from_lang": "python"
+    "content": "procedimiento suma(a, b)\nbegin\n    return a + b\nend"
   }'
 ```
 
-**Desde Pseudocódigo (con "procedimiento"):**
+**Pseudocódigo sin "procedimiento":**
 ```bash
 curl -X POST "http://localhost:8000/api/v1/ast" \
   -H "Content-Type: application/json" \
   -d '{
-    "content": "procedimiento suma(a, b)\nbegin\n    return a + b\nend",
-    "from_lang": "pseudocode"
+    "content": "suma(a, b)\nbegin\n    return a + b\nend"
   }'
 ```
 
-**Desde Pseudocódigo (sin "procedimiento"):**
+**SelectionSort Completo:**
 ```bash
 curl -X POST "http://localhost:8000/api/v1/ast" \
   -H "Content-Type: application/json" \
   -d '{
-    "content": "SelectionSort(A)\nbegin\n    n 🡨 length(A)\n    for i 🡨 1 to n-1 do\n    begin\n        ► Código aquí\n    end\nend",
-    "from_lang": "pseudocode"
+    "content": "SelectionSort(A)\nbegin\n    n 🡨 length(A)\n    i, j, min_index, temp\n    for i 🡨 1 to n-1 do\n    begin\n        min_index 🡨 i\n    end\nend"
   }'
 ```
 
@@ -309,31 +307,22 @@ curl -X POST "http://localhost:8000/api/v1/ast" \
 ```python
 import requests
 
-# Ejemplo 1: Parsear Python
+# Ejemplo 1: Suma simple
 response = requests.post(
     "http://localhost:8000/api/v1/ast",
     json={
         "content": """
-def binary_search(arr, target, n):
-    left = 0
-    right = n - 1
-    while left <= right:
-        mid = (left + right) // 2
-        if arr[mid] == target:
-            return mid
-        if arr[mid] < target:
-            left = mid + 1
-        else:
-            right = mid - 1
-    return -1
-        """,
-        "from_lang": "python"
+procedimiento suma(a, b)
+begin
+    return a + b
+end
+        """
     }
 )
 print(response.json())
 
-# Ejemplo 2: Parsear pseudocódigo (normalizado por Gemini)
-response_psc = requests.post(
+# Ejemplo 2: SelectionSort completo (pseudocódigo normalizado por Gemini)
+response_selection = requests.post(
     "http://localhost:8000/api/v1/ast",
     json={
         "content": """
@@ -364,14 +353,13 @@ begin
         end
     end
 end
-        """,
-        "from_lang": "pseudocode"
+        """
     }
 )
-print(response_psc.json())
+print(response_selection.json())
 ```
 
-**Respuesta (Python y pseudocódigo generan la misma estructura IR):**
+**Respuesta:**
 ```json
 {
   "type": "Program",
@@ -402,17 +390,9 @@ print(response_psc.json())
 }
 ```
 
-**⚠️ Restricciones del parser Python:**
-- ❌ No soporta tuple unpacking: `a, b = b, a`
-- ❌ No soporta asignación múltiple: `a = b = 0`
-- ❌ No soporta `range()` con step: `range(0, 10, 2)`
-- ❌ No soporta comparaciones encadenadas: `0 < x < 10`
-
-Ver [`RESTRICCIONES_AST.md`](RESTRICCIONES_AST.md) para detalles completos.
-
 **📖 Documentación adicional:**
-- Parser de pseudocódigo: [`PARSER_PSEUDOCODIGO.md`](PARSER_PSEUDOCODIGO.md)
-- Implementación AST: [`IMPLEMENTACION_AST.md`](IMPLEMENTACION_AST.md)
+- Parser de pseudocódigo: [`docs/PARSER_PSEUDOCODIGO.md`](docs/PARSER_PSEUDOCODIGO.md)
+- Gramática formal: [`app/grammar/pseudocode.lark`](app/grammar/pseudocode.lark)
 
 **Python:**
 ```python
@@ -680,15 +660,6 @@ pytest tests/ --cov=app --cov-report=html
 
 ### Cobertura de Tests
 
-**Python Parser (7 tests):**
-- ✅ `test_sum_array_with_for` - Arrays y loops
-- ✅ `test_binary_search_with_while_if` - While e if anidados
-- ✅ `test_factorial_recursive` - Recursión
-- ✅ `test_unsupported_range_with_step` - Validación de errores
-- ✅ `test_unsupported_chained_comparison` - Validación de errores
-- ✅ `test_invalid_python_syntax` - Manejo de sintaxis inválida
-- ✅ `test_unsupported_tuple_unpacking` - Validación de restricciones
-
 **Pseudocode Parser (8 tests):**
 - ✅ `test_sum_array_with_for` - For loops y arrays
 - ✅ `test_factorial_with_if` - If-else recursivo
@@ -699,7 +670,7 @@ pytest tests/ --cov=app --cov-report=html
 - ✅ `test_repeat_until` - Repeat-until loops
 - ✅ `test_invalid_pseudocode` - Manejo de errores
 
-**Total: 15/15 tests pasando** ✅
+**Total: 8/8 tests pasando** ✅
 
 ### Ejemplo de Ejecución
 
@@ -707,25 +678,18 @@ pytest tests/ --cov=app --cov-report=html
 $ pytest tests/ -v
 
 ======================== test session starts =========================
-collected 15 items
+collected 8 items
 
-tests/test_ast_builder.py::test_sum_array_with_for PASSED      [  6%]
-tests/test_ast_builder.py::test_binary_search_with_while_if PASSED [ 13%]
-tests/test_ast_builder.py::test_factorial_recursive PASSED     [ 20%]
-tests/test_ast_builder.py::test_unsupported_range_with_step PASSED [ 26%]
-tests/test_ast_builder.py::test_unsupported_chained_comparison PASSED [ 33%]
-tests/test_ast_builder.py::test_invalid_python_syntax PASSED   [ 40%]
-tests/test_ast_builder.py::test_unsupported_tuple_unpacking PASSED [ 46%]
-tests/test_psc_parser.py::test_sum_array_with_for PASSED       [ 53%]
-tests/test_psc_parser.py::test_factorial_with_if PASSED        [ 60%]
-tests/test_psc_parser.py::test_binary_search_with_while PASSED [ 66%]
-tests/test_psc_parser.py::test_nested_loops PASSED             [ 73%]
-tests/test_psc_parser.py::test_call_statement PASSED           [ 80%]
-tests/test_psc_parser.py::test_comparison_operators PASSED     [ 86%]
-tests/test_psc_parser.py::test_repeat_until PASSED             [ 93%]
+tests/test_psc_parser.py::test_sum_array_with_for PASSED       [ 12%]
+tests/test_psc_parser.py::test_factorial_with_if PASSED        [ 25%]
+tests/test_psc_parser.py::test_binary_search_with_while PASSED [ 37%]
+tests/test_psc_parser.py::test_nested_loops PASSED             [ 50%]
+tests/test_psc_parser.py::test_call_statement PASSED           [ 62%]
+tests/test_psc_parser.py::test_comparison_operators PASSED     [ 75%]
+tests/test_psc_parser.py::test_repeat_until PASSED             [ 87%]
 tests/test_psc_parser.py::test_invalid_pseudocode PASSED       [100%]
 
-======================== 15 passed in 1.2s ==========================
+======================== 8 passed in 1.0s ==========================
 ```
 
 ## 🧪 Modelos de Datos (Pydantic Schemas)
@@ -801,15 +765,15 @@ Request body para `/generate`:
 - [x] Documentación completa de API con Swagger
 
 ### ✅ Fase 1.5: Parsing y AST (COMPLETADO) 
-- [x] Parser Python → IR unificada
-- [x] Parser Pseudocódigo → IR unificada
-- [x] Endpoint `/ast` - Construcción de AST
+- [x] Parser Pseudocódigo → IR
+- [x] Endpoint `/ast` - Construcción de AST desde pseudocódigo
 - [x] Soporte para declaraciones de variables
 - [x] Soporte para asignaciones a arrays multidimensionales
 - [x] Sintaxis flexible (con/sin `procedimiento`)
 - [x] Manejo de comentarios `►`
-- [x] Tests completos (15/15 passing)
+- [x] Tests completos (8/8 passing)
 - [x] Documentación técnica detallada
+- [x] ⚠️ **Removido soporte Python** - Solo pseudocódigo permitido
 
 **Mejoras Recientes del Parser:**
 - ✅ Regla `lvalue` para asignaciones a arrays: `A[i] 🡨 valor`
@@ -817,6 +781,7 @@ Request body para `/generate`:
 - ✅ Soporte `var_declaration` para declaraciones: `i, j, k`
 - ✅ Ambas sintaxis: `procedimiento func()` y `func()`
 - ✅ Paréntesis opcionales en condiciones: `if (x > 0)` o `if x > 0`
+- 🔄 **Simplificación**: Removido parser Python, enfoque 100% en pseudocódigo
 
 ### 🔄 Fase 2: Análisis de Complejidad (En Progreso)
 - [ ] Implementar visitor pattern para recorrer AST
@@ -920,6 +885,17 @@ python main.py
 ---
 
 ## 📝 Changelog
+
+### v1.2.0 - Solo Pseudocódigo (Noviembre 2025)
+**Cambios Importantes:**
+- 🔴 **BREAKING**: Endpoint `/ast` ahora acepta solo pseudocódigo (removido soporte Python)
+- 🧹 Simplificación: Removido `py_ast_builder.py` del flujo principal
+- 📝 Request body simplificado: Ya no requiere `from_lang` parameter
+- 🎯 Enfoque 100% en pseudocódigo para análisis de complejidad
+- ✅ 8/8 tests pasando (solo pseudocódigo)
+
+**Razón del Cambio:**
+El proyecto se enfoca en analizar pseudocódigo normalizado por Gemini AI. El soporte para Python fue removido para simplificar la arquitectura y mantener un único flujo de parsing.
 
 ### v1.1.0 - Parser de Pseudocódigo Mejorado (Octubre 2025)
 **Nuevas Características:**
