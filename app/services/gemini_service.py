@@ -3,22 +3,109 @@ from app.config.settings import settings
 import asyncio
 import logging
 import re
+import time
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
 ARROW = "🡨"  # U+1F86A
+
 class GeminiService:
     def __init__(self):
-        """Inicializa el servicio de Gemini con la API key desde .env"""
-        # La API key se lee automáticamente desde el archivo .env mediante python-decouple
-        if not settings.GEMINI_API_KEY:
+        """Inicializa el servicio de Gemini con rotación de múltiples API keys"""
+        # Cargar todas las API keys disponibles
+        self.api_keys = self._load_api_keys()
+        
+        if not self.api_keys:
             raise EnvironmentError(
-                "GEMINI_API_KEY no definida. Por favor, configura la variable GEMINI_API_KEY en el archivo .env"
+                "No se encontraron API keys válidas. Por favor, configura GEMINI_API_KEY o GEMINI_API_KEYS en el archivo .env"
             )
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        # Modelo vigente
-        self.model = genai.GenerativeModel("gemini-2.5-pro")
+        
+        # Estado de rotación
+        self.current_key_index = 0
+        self.failed_keys = set()  # Keys que han fallado por quota
+        
+        # Configurar con la primera key
+        self._configure_current_key()
+        
+        # Configuración de reintentos y timeout desde .env
+        self.max_retries = settings.GEMINI_MAX_RETRIES
+        self.timeout = settings.GEMINI_TIMEOUT
+        self.base_delay = settings.GEMINI_BASE_DELAY
+        
         logger.info("Servicio Gemini inicializado correctamente")
+        logger.info(f"  🔑 API Keys disponibles: {len(self.api_keys)}")
+        logger.info(f"  ⏱️  Timeout: {self.timeout}s")
+        logger.info(f"  🔄 Reintentos: {self.max_retries}")
+        logger.info(f"  ⏳ Delay base: {self.base_delay}s")
+    
+    def _load_api_keys(self) -> List[str]:
+        """
+        Carga todas las API keys disponibles desde el .env
+        
+        Soporta dos formatos:
+        1. GEMINI_API_KEY=key1 (una sola key)
+        2. GEMINI_API_KEYS=key1,key2,key3 (múltiples keys separadas por coma)
+        
+        Returns:
+            Lista de API keys válidas (sin duplicados ni vacías)
+        """
+        keys = []
+        
+        # Intentar cargar múltiples keys
+        if hasattr(settings, 'GEMINI_API_KEYS') and settings.GEMINI_API_KEYS:
+            keys_str = settings.GEMINI_API_KEYS
+            keys = [k.strip() for k in keys_str.split(',') if k.strip()]
+        
+        # Si no hay múltiples, intentar la key individual
+        if not keys and settings.GEMINI_API_KEY:
+            keys = [settings.GEMINI_API_KEY.strip()]
+        
+        # Filtrar keys vacías y eliminar duplicados
+        keys = list(set([k for k in keys if k]))
+        
+        logger.info(f"📋 Cargadas {len(keys)} API key(s)")
+        return keys
+    
+    def _configure_current_key(self):
+        """Configura Gemini con la API key actual"""
+        if self.current_key_index >= len(self.api_keys):
+            self.current_key_index = 0
+        
+        current_key = self.api_keys[self.current_key_index]
+        genai.configure(api_key=current_key)
+        # Usando gemini-2.5-flash (modelo actualizado de Google)
+        self.model = genai.GenerativeModel("gemini-2.5-flash")
+        
+        # Mostrar solo los últimos 4 caracteres por seguridad
+        masked_key = "***" + current_key[-4:] if len(current_key) > 4 else "***"
+        logger.info(f"🔑 Usando API key #{self.current_key_index + 1}/{len(self.api_keys)}: {masked_key}")
+    
+    def _rotate_to_next_key(self) -> bool:
+        """
+        Rota a la siguiente API key disponible
+        
+        Returns:
+            True si se pudo rotar, False si no hay más keys disponibles
+        """
+        # Marcar la key actual como fallida
+        self.failed_keys.add(self.current_key_index)
+        
+        # Buscar la siguiente key no fallida
+        attempts = 0
+        while attempts < len(self.api_keys):
+            self.current_key_index = (self.current_key_index + 1) % len(self.api_keys)
+            
+            if self.current_key_index not in self.failed_keys:
+                logger.warning(f"🔄 Rotando a API key #{self.current_key_index + 1}/{len(self.api_keys)}")
+                self._configure_current_key()
+                return True
+            
+            attempts += 1
+        
+        # Todas las keys han fallado
+        logger.error("❌ Todas las API keys han excedido su cuota")
+        return False
 
     async def normalize_to_pseudocode(self, natural_language: str) -> str:
         """
@@ -27,28 +114,94 @@ class GeminiService:
         """
         # ¡OJO!: llaves literales como {{atributos}} para que no fallen los f-strings
         prompt = f"""
-Convierte la siguiente descripción en pseudocódigo siguiendo EXACTAMENTE esta gramática:
+Convierte la siguiente descripción en PSEUDOCÓDIGO ESTRUCTURADO siguiendo EXACTAMENTE estas reglas:
 
-REGLAS PRINCIPALES:
-- Procedimientos: nombre_procedimiento(parametros) \nbegin ... end
-- Asignaciones: variable {ARROW} valor
-- FOR: for variable {ARROW} inicio to fin do \nbegin ... end
-- WHILE: while (condicion) do \nbegin ... end
-- REPEAT: repeat ... until (condicion)
-- IF: if (condicion) then \nbegin ... end else \nbegin ... end
-- Comentarios inician con ►
-- Llamadas: CALL nombre_funcion(parametros)
-- Acceso a arreglos: A[i], subarreglos: A[1..j]
-- Variables locales declaradas después de begin
-- Objetos: Clase nombre {{atributos}}
-- Valores booleanos: T, F
-- Operadores: and, or, not, <, >, ≤, ≥, =, ≠, +, -, *, /, mod, div
+SINTAXIS OBLIGATORIA:
+1. PROCEDIMIENTOS: Siempre usar "begin" y "end"
+   procedimiento_nombre(parametros)
+   begin
+       instrucciones
+   end
 
-DESCRIPCIÓN:
+2. FOR: Siempre terminar con "do" seguido de "begin...end"
+   for variable {ARROW} inicio to fin do
+   begin
+       instrucciones
+   end
+
+3. WHILE: Siempre terminar con "do" seguido de "begin...end"
+   while (condicion) do
+   begin
+       instrucciones
+   end
+
+4. REPEAT-UNTIL: DEBE usar "begin" inmediatamente después de "repeat"
+   repeat
+   begin
+       instrucciones
+   end
+   until (condicion)
+
+5. IF-THEN-ELSE: Siempre usar "begin...end" en bloques
+   if (condicion) then
+   begin
+       instrucciones
+   end
+   else
+   begin
+       instrucciones
+   end
+
+6. ASIGNACIONES: Usar flecha {ARROW}
+   variable {ARROW} valor
+
+7. ARRAYS: A[i] o A[1..n]
+
+EJEMPLOS CORRECTOS:
+
+Ejemplo 1 - Burbuja:
+burbuja(A, n)
+begin
+    for i {ARROW} 1 to n-1 do
+    begin
+        for j {ARROW} 1 to n-i do
+        begin
+            if (A[j] > A[j+1]) then
+            begin
+                temp {ARROW} A[j]
+                A[j] {ARROW} A[j+1]
+                A[j+1] {ARROW} temp
+            end
+        end
+    end
+end
+
+Ejemplo 2 - Con REPEAT:
+buscar(A, n, x)
+begin
+    i {ARROW} 1
+    repeat
+    begin
+        if (A[i] = x) then
+        begin
+            return i
+        end
+        i {ARROW} i + 1
+    end
+    until (i > n)
+    return -1
+end
+
+ERRORES COMUNES A EVITAR:
+❌ NUNCA escribir "repeat" sin "begin" después
+❌ NUNCA omitir "begin...end" en loops o condicionales
+❌ NUNCA usar ":" para asignaciones (usar {ARROW})
+❌ NUNCA mezclar español e inglés en palabras clave
+
+AHORA CONVIERTE:
 {natural_language}
 
-RESPUESTA:
-(Solo el pseudocódigo, sin explicaciones, sin markdown, sin ```)
+RESPUESTA (solo pseudocódigo, sin explicaciones, sin markdown, sin ```):
 """
         try:
             raw = await self._generate_content(prompt)
@@ -99,16 +252,115 @@ RESPUESTA:
 
     async def _generate_content(self, prompt: str) -> str:
         """
-        Método helper: usa Gemini de forma asíncrona sin bloquear FastAPI.
+        Método helper: usa Gemini de forma asíncrona con timeout, reintentos y rotación de keys.
+        
+        - Timeout: 60 segundos
+        - Reintentos: 3 intentos con backoff exponencial (2s, 4s, 8s)
+        - Rotación automática de API keys si se detecta error 429 (quota exceeded)
+        - Reintentos automáticos para errores 500 (server errors)
         """
-        try:
-            def _call():
-                resp = self.model.generate_content(prompt)
-                return resp.text if hasattr(resp, "text") else ""
-            return await asyncio.to_thread(_call)
-        except Exception as e:
-            logger.error(f"Error en la generación de contenido: {e}")
-            raise
+        last_error = None
+        keys_rotated = 0  # Contador de rotaciones de keys
+        
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                logger.info(f"🔄 Intento {attempt}/{self.max_retries} - Llamando a Gemini...")
+                
+                def _call():
+                    resp = self.model.generate_content(prompt)
+                    return resp.text if hasattr(resp, "text") else ""
+                
+                # Ejecutar con timeout
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(_call),
+                    timeout=self.timeout
+                )
+                
+                logger.info(f"✅ Respuesta recibida exitosamente (intento {attempt})")
+                return result
+                
+            except asyncio.TimeoutError:
+                last_error = f"Timeout después de {self.timeout} segundos"
+                logger.warning(f"⏱️  Timeout en intento {attempt}/{self.max_retries}")
+                
+                if attempt < self.max_retries:
+                    delay = self.base_delay * (2 ** (attempt - 1))
+                    logger.info(f"⏳ Esperando {delay}s antes de reintentar...")
+                    await asyncio.sleep(delay)
+                    
+            except Exception as e:
+                error_str = str(e)
+                last_error = error_str
+                
+                # ==================== LOGGING DETALLADO DEL ERROR ====================
+                logger.error("=" * 80)
+                logger.error("🔴 ERROR CRUDO DE GEMINI (sin procesar):")
+                logger.error(f"Tipo de excepción: {type(e).__name__}")
+                logger.error(f"Mensaje completo: {error_str}")
+                logger.error(f"Representación: {repr(e)}")
+                
+                # Si el error tiene atributos adicionales, mostrarlos
+                if hasattr(e, '__dict__'):
+                    logger.error(f"Atributos del error: {e.__dict__}")
+                
+                # Mostrar traceback completo
+                import traceback
+                logger.error("Traceback completo:")
+                logger.error(traceback.format_exc())
+                logger.error("=" * 80)
+                # ======================================================================
+                
+                # Detectar error 429 (quota exceeded)
+                is_429_error = "429" in error_str or "quota exceeded" in error_str.lower()
+                
+                # Detectar errores 500 (server errors)
+                is_500_error = "500" in error_str or "internal error" in error_str.lower()
+                
+                # Detectar errores 503 (service unavailable)
+                is_503_error = "503" in error_str or "service unavailable" in error_str.lower()
+                
+                if is_429_error:
+                    logger.warning(f"⚠️  Error 429 (Quota Exceeded) detectado")
+                    
+                    # Intentar rotar a la siguiente key
+                    if self._rotate_to_next_key():
+                        keys_rotated += 1
+                        logger.info(f"✅ Rotación exitosa (#{keys_rotated}). Reintentando inmediatamente...")
+                        # No incrementar 'attempt', reintentar inmediatamente con la nueva key
+                        continue
+                    else:
+                        # No hay más keys disponibles
+                        logger.error("❌ No hay más API keys disponibles. Todas han excedido su cuota.")
+                        raise Exception(
+                            f"Todas las API keys ({len(self.api_keys)}) han excedido su cuota diaria. "
+                            f"Por favor, espera o agrega más keys al archivo .env"
+                        )
+                
+                elif is_500_error:
+                    logger.warning(f"⚠️  Error 500 en intento {attempt}/{self.max_retries}: {error_str}")
+                    
+                    if attempt < self.max_retries:
+                        delay = self.base_delay * (2 ** (attempt - 1))
+                        logger.info(f"⏳ Esperando {delay}s antes de reintentar...")
+                        await asyncio.sleep(delay)
+                    else:
+                        logger.error(f"❌ Error 500 persistente después de {self.max_retries} intentos")
+                
+                elif is_503_error:
+                    logger.warning(f"⚠️  Error 503 (Service Unavailable) detectado")
+                    logger.warning(f"Esto puede indicar que el modelo no existe o no está disponible")
+                    logger.warning(f"Modelo actual: gemini-2.5-flash")
+                    logger.warning(f"Modelos válidos: gemini-1.5-flash, gemini-1.5-pro")
+                    raise
+                
+                else:
+                    # Otros errores (403, etc.) no reintentamos
+                    logger.error(f"❌ Error no recuperable: {error_str}")
+                    raise
+        
+        # Si llegamos aquí, fallaron todos los intentos
+        logger.error(f"❌ Fallaron todos los {self.max_retries} intentos")
+        raise Exception(f"Error en la generación de contenido después de {self.max_retries} intentos: {last_error}")
 
 # Instancia global
 gemini_service = GeminiService()

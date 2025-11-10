@@ -1,0 +1,15 @@
+================================================================================
+TEST COMPLETO: COSTOS POR LÍNEA Y PROCESO DEL SOLVER
+================================================================================
+
+[1/4] Validando sintaxis...
+[OK] Codigo valido: True
+
+[2/4] Generando AST...
+Traceback (most recent call last):
+  File "C:\Users\jhonp\OneDrive\Documentos\Universidad\Semestre VII\Algoritmos\Proyecto Analisis\Algorithms_Proyect\test_complete_features.py", line 48, in <module>
+    print(f"\u2713 AST generado: {len(ast.functions)} funciones")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>

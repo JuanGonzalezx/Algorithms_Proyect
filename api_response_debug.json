@@ -1,0 +1,531 @@
+{
+  "input_text": "ordenamiento_burbuja(A, n)\nbegin\n    for i 🡨 1 to n do\n    begin\n        x 🡨 A[i]\n        if (x > 5) then\n        begin\n            y 🡨 x\n        end\n    end\nend",
+  "validation": {
+    "era_algoritmo_valido": true,
+    "codigo_corregido": "\nordenamiento_burbuja(A, n)\nbegin\n    for i 🡨 1 to n do\n    begin\n        x 🡨 A[i]\n        if (x > 5) then\n        begin\n            y 🡨 x\n        end\n    end\nend\n",
+    "errores": [],
+    "normalizaciones": [],
+    "hints": {
+      "parser_engine": "lark-lalr",
+      "grammar_version": "1.0",
+      "language_hint": "es",
+      "parse_tree_nodes": 48,
+      "total_errors": 0,
+      "total_normalizations": 0,
+      "code_length": 163,
+      "line_count": 12
+    }
+  },
+  "ast": {
+    "success": true,
+    "ast": {
+      "type": "Program",
+      "functions": [
+        {
+          "type": "Function",
+          "name": "ordenamiento_burbuja",
+          "params": [
+            {
+              "name": "A"
+            },
+            {
+              "name": "n"
+            }
+          ],
+          "body": {
+            "type": "Block",
+            "statements": [
+              {
+                "type": "For",
+                "var": "i",
+                "start": {
+                  "type": "Literal",
+                  "value": 1
+                },
+                "end": {
+                  "type": "Var",
+                  "name": "n"
+                },
+                "body": {
+                  "type": "Block",
+                  "statements": [
+                    {
+                      "type": "Assign",
+                      "target": {
+                        "type": "Var",
+                        "name": "x"
+                      },
+                      "value": {
+                        "type": "ArrayAccess",
+                        "array": {
+                          "type": "Var",
+                          "name": "A"
+                        },
+                        "index": {
+                          "type": "Var",
+                          "name": "i"
+                        }
+                      }
+                    },
+                    {
+                      "type": "If",
+                      "cond": {
+                        "type": "Compare",
+                        "op": ">",
+                        "left": {
+                          "type": "Var",
+                          "name": "x"
+                        },
+                        "right": {
+                          "type": "Literal",
+                          "value": 5
+                        }
+                      },
+                      "then_block": {
+                        "type": "Block",
+                        "statements": [
+                          {
+                            "type": "Assign",
+                            "target": {
+                              "type": "Var",
+                              "name": "y"
+                            },
+                            "value": {
+                              "type": "Var",
+                              "name": "x"
+                            }
+                          }
+                        ]
+                      },
+                      "else_block": null
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "metadata": {
+      "functions": 1,
+      "total_nodes": 1
+    },
+    "error": null
+  },
+  "costs": {
+    "per_node": [
+      {
+        "node_id": "Assign4",
+        "node_type": "Assign",
+        "line_start": 6,
+        "line_end": 6,
+        "code_snippet": "x ← ...",
+        "cost": {
+          "best": "1",
+          "avg": "1",
+          "worst": "1"
+        },
+        "own_cost": {
+          "best": "1",
+          "avg": "1",
+          "worst": "1"
+        },
+        "execution_count": null,
+        "loop_info": null
+      },
+      {
+        "node_id": "Assign6",
+        "node_type": "Assign",
+        "line_start": 9,
+        "line_end": 9,
+        "code_snippet": "y ← ...",
+        "cost": {
+          "best": "1",
+          "avg": "1",
+          "worst": "1"
+        },
+        "own_cost": {
+          "best": "1",
+          "avg": "1",
+          "worst": "1"
+        },
+        "execution_count": null,
+        "loop_info": null
+      },
+      {
+        "node_id": "If5",
+        "node_type": "If",
+        "line_start": 7,
+        "line_end": 10,
+        "code_snippet": "if ...",
+        "cost": {
+          "best": "1",
+          "avg": "1 + 0.5",
+          "worst": "1 + max(1, 0)"
+        },
+        "own_cost": {
+          "best": "1",
+          "avg": "1",
+          "worst": "1"
+        },
+        "execution_count": null,
+        "loop_info": null
+      },
+      {
+        "node_id": "For3",
+        "node_type": "For",
+        "line_start": 4,
+        "line_end": 11,
+        "code_snippet": "for i ← ... to ...",
+        "cost": {
+          "best": "Sum(1 + 1, (i, 1, n))",
+          "avg": "Sum(1 + 1 + 0.5, (i, 1, n))",
+          "worst": "Sum(1 + 1 + max(1, 0), (i, 1, n))"
+        },
+        "own_cost": {
+          "best": "0",
+          "avg": "0",
+          "worst": "0"
+        },
+        "execution_count": null,
+        "loop_info": {
+          "var": "i",
+          "start": "1",
+          "end": "n"
+        }
+      },
+      {
+        "node_id": "Func2",
+        "node_type": "Function",
+        "line_start": null,
+        "line_end": null,
+        "code_snippet": null,
+        "cost": {
+          "best": "Sum(1 + 1, (i, 1, n))",
+          "avg": "Sum(1 + 1 + 0.5, (i, 1, n))",
+          "worst": "Sum(1 + 1 + max(1, 0), (i, 1, n))"
+        },
+        "own_cost": null,
+        "execution_count": null,
+        "loop_info": null
+      },
+      {
+        "node_id": "Prog1",
+        "node_type": "Program",
+        "line_start": null,
+        "line_end": null,
+        "code_snippet": null,
+        "cost": {
+          "best": "Sum(1 + 1, (i, 1, n))",
+          "avg": "Sum(1 + 1 + 0.5, (i, 1, n))",
+          "worst": "Sum(1 + 1 + max(1, 0), (i, 1, n))"
+        },
+        "own_cost": null,
+        "execution_count": null,
+        "loop_info": null
+      }
+    ],
+    "per_line": [
+      {
+        "line_number": 4,
+        "code": "    for i 🡨 1 to n do",
+        "operations": [
+          "For"
+        ],
+        "cost": {
+          "best": "(n - 1 + 2)",
+          "avg": "(n - 1 + 2)",
+          "worst": "(n - 1 + 2)"
+        }
+      },
+      {
+        "line_number": 6,
+        "code": "        x 🡨 A[i]",
+        "operations": [
+          "Assign"
+        ],
+        "cost": {
+          "best": "Sum(1, (i, 1, n))",
+          "avg": "Sum(1, (i, 1, n))",
+          "worst": "Sum(1, (i, 1, n))"
+        }
+      },
+      {
+        "line_number": 7,
+        "code": "        if (x > 5) then",
+        "operations": [
+          "If"
+        ],
+        "cost": {
+          "best": "Sum(1, (i, 1, n))",
+          "avg": "Sum(1, (i, 1, n))",
+          "worst": "Sum(1, (i, 1, n))"
+        }
+      },
+      {
+        "line_number": 9,
+        "code": "            y 🡨 x",
+        "operations": [
+          "Assign"
+        ],
+        "cost": {
+          "best": "0",
+          "avg": "Sum((0.5 * (1)), (i, 1, n))",
+          "worst": "Sum(1, (i, 1, n))"
+        }
+      }
+    ],
+    "total": {
+      "best": "Sum(1 + 1, (i, 1, n))",
+      "avg": "Sum(1 + 1 + 0.5, (i, 1, n))",
+      "worst": "Sum(1 + 1 + max(1, 0), (i, 1, n))"
+    }
+  },
+  "solution": {
+    "steps": [
+      {
+        "step_number": 1,
+        "description": "Expresión inicial (mejor caso)",
+        "expression": "T(n) = Sum(1 + 1, (i, 1, n))",
+        "case": "best"
+      },
+      {
+        "step_number": 2,
+        "description": "Expresión inicial (caso promedio)",
+        "expression": "T(n) = Sum(1 + 1 + 0.5, (i, 1, n))",
+        "case": "avg"
+      },
+      {
+        "step_number": 3,
+        "description": "Expresión inicial (peor caso)",
+        "expression": "T(n) = Sum(1 + 1 + max(1, 0), (i, 1, n))",
+        "case": "worst"
+      },
+      {
+        "step_number": 4,
+        "description": "Resolver sumatoria",
+        "expression": "Sum(2, (i, 1, n)) = 2*n",
+        "case": "best"
+      },
+      {
+        "step_number": 5,
+        "description": "Resultado final (best)",
+        "expression": "T(n) = 2*n",
+        "case": "best"
+      },
+      {
+        "step_number": 6,
+        "description": "Resolver sumatoria",
+        "expression": "Sum(2.5, (i, 1, n)) = 2.5*n",
+        "case": "avg"
+      },
+      {
+        "step_number": 7,
+        "description": "Convertir a fracciones (avg)",
+        "expression": "T(n) = 5*n/2",
+        "case": "avg"
+      },
+      {
+        "step_number": 8,
+        "description": "Resultado final (avg)",
+        "expression": "T(n) = 5*n/2",
+        "case": "avg"
+      },
+      {
+        "step_number": 9,
+        "description": "Resolver sumatoria",
+        "expression": "Sum(3, (i, 1, n)) = 3*n",
+        "case": "worst"
+      },
+      {
+        "step_number": 10,
+        "description": "Resultado final (worst)",
+        "expression": "T(n) = 3*n",
+        "case": "worst"
+      }
+    ],
+    "steps_by_line": [
+      {
+        "step_number": 1,
+        "description": "Sumar costos de cada línea (best)",
+        "expression": "T(n) = L6 + L7 + L9",
+        "case": "best"
+      },
+      {
+        "step_number": 2,
+        "description": "Línea 6: x 🡨 A[i]...",
+        "expression": "L6 = Sum(1, (i, 1, n))",
+        "case": "best"
+      },
+      {
+        "step_number": 3,
+        "description": "Línea 7: if (x > 5) then...",
+        "expression": "L7 = Sum(1, (i, 1, n))",
+        "case": "best"
+      },
+      {
+        "step_number": 4,
+        "description": "Línea 9: y 🡨 x...",
+        "expression": "L9 = 0",
+        "case": "best"
+      },
+      {
+        "step_number": 5,
+        "description": "Sustituir valores (best)",
+        "expression": "T(n) = (Sum(1, (i, 1, n))) + (Sum(1, (i, 1, n))) + (0)",
+        "case": "best"
+      },
+      {
+        "step_number": 6,
+        "description": "Resolver sumatoria",
+        "expression": "Sum(1, (i, 1, n)) = n",
+        "case": "best"
+      },
+      {
+        "step_number": 7,
+        "description": "Resultado final (best)",
+        "expression": "T(n) = n",
+        "case": "best"
+      },
+      {
+        "step_number": 8,
+        "description": "Resultado final línea por línea (best)",
+        "expression": "T(n) = n",
+        "case": "best"
+      },
+      {
+        "step_number": 9,
+        "description": "Sumar costos de cada línea (avg)",
+        "expression": "T(n) = L6 + L7 + L9",
+        "case": "avg"
+      },
+      {
+        "step_number": 10,
+        "description": "Línea 6: x 🡨 A[i]...",
+        "expression": "L6 = Sum(1, (i, 1, n))",
+        "case": "avg"
+      },
+      {
+        "step_number": 11,
+        "description": "Línea 7: if (x > 5) then...",
+        "expression": "L7 = Sum(1, (i, 1, n))",
+        "case": "avg"
+      },
+      {
+        "step_number": 12,
+        "description": "Línea 9: y 🡨 x...",
+        "expression": "L9 = Sum((0.5 * (1)), (i, 1, n))",
+        "case": "avg"
+      },
+      {
+        "step_number": 13,
+        "description": "Sustituir valores (avg)",
+        "expression": "T(n) = (Sum(1, (i, 1, n))) + (Sum(1, (i, 1, n))) + (Sum((0.5 * (1)), (i, 1, n)))",
+        "case": "avg"
+      },
+      {
+        "step_number": 14,
+        "description": "Resolver sumatoria",
+        "expression": "Sum(1, (i, 1, n)) = n",
+        "case": "avg"
+      },
+      {
+        "step_number": 15,
+        "description": "Resolver sumatoria",
+        "expression": "Sum(0.5, (i, 1, n)) = 0.5*n",
+        "case": "avg"
+      },
+      {
+        "step_number": 16,
+        "description": "Convertir a fracciones (avg)",
+        "expression": "T(n) = n/2",
+        "case": "avg"
+      },
+      {
+        "step_number": 17,
+        "description": "Resultado final (avg)",
+        "expression": "T(n) = n/2",
+        "case": "avg"
+      },
+      {
+        "step_number": 18,
+        "description": "Resultado final línea por línea (avg)",
+        "expression": "T(n) = n/2",
+        "case": "avg"
+      },
+      {
+        "step_number": 19,
+        "description": "Sumar costos de cada línea (worst)",
+        "expression": "T(n) = L6 + L7 + L9",
+        "case": "worst"
+      },
+      {
+        "step_number": 20,
+        "description": "Línea 6: x 🡨 A[i]...",
+        "expression": "L6 = Sum(1, (i, 1, n))",
+        "case": "worst"
+      },
+      {
+        "step_number": 21,
+        "description": "Línea 7: if (x > 5) then...",
+        "expression": "L7 = Sum(1, (i, 1, n))",
+        "case": "worst"
+      },
+      {
+        "step_number": 22,
+        "description": "Línea 9: y 🡨 x...",
+        "expression": "L9 = Sum(1, (i, 1, n))",
+        "case": "worst"
+      },
+      {
+        "step_number": 23,
+        "description": "Sustituir valores (worst)",
+        "expression": "T(n) = (Sum(1, (i, 1, n))) + (Sum(1, (i, 1, n))) + (Sum(1, (i, 1, n)))",
+        "case": "worst"
+      },
+      {
+        "step_number": 24,
+        "description": "Resolver sumatoria",
+        "expression": "Sum(1, (i, 1, n)) = n",
+        "case": "worst"
+      },
+      {
+        "step_number": 25,
+        "description": "Resultado final (worst)",
+        "expression": "T(n) = n",
+        "case": "worst"
+      },
+      {
+        "step_number": 26,
+        "description": "Resultado final línea por línea (worst)",
+        "expression": "T(n) = n",
+        "case": "worst"
+      }
+    ],
+    "exact": {
+      "best": "2*n",
+      "avg": "5*n/2",
+      "worst": "3*n"
+    },
+    "big_o": {
+      "best": "O(n)",
+      "avg": "O(n)",
+      "worst": "O(n)"
+    },
+    "bounds": {
+      "omega": "Ω(n)",
+      "theta": "Θ(n)",
+      "big_o": "O(n)"
+    }
+  },
+  "metadata": {
+    "pipeline_stages": 4,
+    "used_gemini_normalization": false,
+    "input_type": "pseudocode",
+    "total_nodes_analyzed": 6,
+    "has_errors": false,
+    "normalizations_applied": 0,
+    "final_pseudocode": "\nordenamiento_burbuja(A, n)\nbegin\n    for i 🡨 1 to n do\n    begin\n        x 🡨 A[i]\n        if (x > 5) then\n        begin\n            y 🡨 x\n        end\n    end\nend\n"
+  }
+}

@@ -125,9 +125,17 @@ class Call(Expr):
 @dataclass
 class Stmt:
     """Sentencia base"""
+    line_start: Optional[int] = None  # Línea de inicio (1-indexed)
+    line_end: Optional[int] = None    # Línea de fin (1-indexed)
     
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        result = asdict(self)
+        # Incluir metadatos de línea si están disponibles
+        if self.line_start is not None:
+            result['line_start'] = self.line_start
+        if self.line_end is not None:
+            result['line_end'] = self.line_end
+        return result
 
 
 @dataclass
