@@ -323,7 +323,8 @@ class CostAnalyzer:
         Analiza un bucle while con coste del guard incluido.
         
         Regla:
-        - Best: condición falsa al inicio → 1 evaluación del guard
+        - Best: Si está dentro de loop → se evalúa 1 vez por iteración del padre
+                Si está fuera de loop → 1 evaluación total
         - Avg: M = n/2 iteraciones → M*guard + Sum(body, (t,1,M)) + guard
         - Worst: M = n iteraciones → n*guard + Sum(body, (t,1,n)) + guard
         
@@ -333,6 +334,9 @@ class CostAnalyzer:
         
         # Calcular coste del guard (condición)
         guard_cost = self._cost_of_expr(while_stmt.cond)
+        
+        # IMPORTANTE: Detectar si estamos dentro de un loop
+        is_nested = self.context.loop_depth > 0
         
         # Incrementar profundidad de loop
         self.context.loop_depth += 1
@@ -347,18 +351,37 @@ class CostAnalyzer:
         self.context.loop_depth -= 1
         
         # Mejor caso: condición falsa al inicio → solo 1 evaluación del guard
+        # El while reporta su costo LOCAL (una sola ejecución)
+        # El loop padre (si existe) multiplicará este costo
         best = guard_cost if guard_cost != "0" else "1"
         
-        # Caso promedio: M = n/2 iteraciones
+        # IMPORTANTE: Si estamos dentro de un loop, usar la variable del loop padre
+        # para expresar el número máximo de iteraciones
+        if is_nested and self.context.loop_depth >= 0:
+            # Obtener la variable del loop padre (el anterior nivel)
+            parent_loop_var = self.context.next_loop_var() if self.context.loop_depth > 0 else "i"
+            # Si estamos en loop_depth=1 (un nivel), la variable padre fue 'i'
+            # Decrementamos temporalmente para obtenerla
+            self.context.loop_depth -= 1
+            parent_loop_var = self.context.next_loop_var()
+            self.context.loop_depth += 1
+            
+            # Usar la variable del loop padre como límite superior
+            M_avg = f"{parent_loop_var}/2"
+            M_worst = parent_loop_var
+        else:
+            # No estamos anidados, usar n como antes
+            M_avg = "n/2"
+            M_worst = "n"
+        
+        # Caso promedio: M = parent_var/2 iteraciones (o n/2 si no hay padre)
         # Coste = M*guard + Sum(body, (t,1,M)) + guard
-        M_avg = "n/2"
         guard_evals_avg = self._multiply_terms(M_avg, guard_cost)
         body_sum_avg = self._create_sum(body_cost.avg, iter_var, "1", M_avg)
         avg = self._add_terms([guard_evals_avg, body_sum_avg, guard_cost])
         
-        # Peor caso: M = n iteraciones
-        # Coste = n*guard + Sum(body, (t,1,n)) + guard
-        M_worst = "n"
+        # Peor caso: M = parent_var iteraciones (o n si no hay padre)
+        # Coste = M*guard + Sum(body, (t,1,M)) + guard
         guard_evals_worst = self._multiply_terms(M_worst, guard_cost)
         body_sum_worst = self._create_sum(body_cost.worst, iter_var, "1", M_worst)
         worst = self._add_terms([guard_evals_worst, body_sum_worst, guard_cost])

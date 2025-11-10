@@ -11,7 +11,8 @@ from app.services.ast_service import build_ast
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1", tags=["analyzer"])
+# Router sin prefijo (se agrega en main.py)
+router = APIRouter(tags=["analyzer"])
 
 
 

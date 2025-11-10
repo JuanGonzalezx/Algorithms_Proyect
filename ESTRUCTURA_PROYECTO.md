@@ -1,4 +1,4 @@
-# 📁 Estructura del Proyecto Reorganizada
+# 📁 Estructura del Proyecto
 
 ## 🎯 Vista General
 
@@ -7,160 +7,173 @@ Algorithms_Proyect/
 ├── 📄 main.py                  # Punto de entrada de la aplicación
 ├── 📄 README.md                # Documentación principal
 ├── 📄 requirements.txt         # Dependencias del proyecto
-├── 📄 .env                     # Variables de entorno
+├── 📄 .env                     # Variables de entorno (no versionado)
+├── 📄 .env.example            # Plantilla de configuración
 ├── 📄 .gitignore              # Archivos ignorados por Git
 │
 ├── 📂 app/                     # Código fuente principal
 │   ├── api/                    # Endpoints FastAPI
+│   │   ├── __init__.py
+│   │   └── routes.py           # Rutas del API
 │   ├── config/                 # Configuración
-│   ├── controllers/            # Controladores
-│   ├── core/                   # Lógica central (parser, AST)
+│   │   ├── __init__.py
+│   │   └── settings.py         # Variables de entorno
+│   ├── controllers/            # Controladores (legacy)
+│   ├── core/                   # Lógica central (legacy)
+│   │   ├── psc_parser.py
+│   │   └── py_ast_builder.py
 │   ├── grammar/                # Gramática de pseudocódigo
+│   │   └── pseudocode.lark
 │   ├── models/                 # Modelos de datos
-│   ├── modules/                # Módulos del sistema
-│   └── services/               # Servicios (Gemini, etc.)
+│   │   └── ast_nodes.py
+│   ├── modules/                # ✨ Arquitectura modular de agentes
+│   │   ├── syntax_validator/   # Agente 1: Validación sintáctica
+│   │   ├── parser/             # Agente 2: Parser (Lark → AST)
+│   │   ├── analyzer/           # Agente 3: Análisis de costos
+│   │   └── solver/             # Agente 4: Resolución de sumatorias
+│   ├── services/               # Servicios externos
+│   │   └── gemini_service.py   # Integración con Gemini API
+│   └── shared/                 # Recursos compartidos
+│       ├── models.py           # Modelos Pydantic
+│       └── grammar/            # Gramáticas compartidas
 │
-├── 📂 ejemplos/                # Scripts de ejemplo ✨ NUEVO
-│   ├── ejemplo_cost_analyzer.py
-│   ├── ejemplo_parser_agent.py
-│   ├── ejemplo_series_solver.py
-│   ├── demo_completo.py
-│   └── ...
-│
-├── 📂 test/                    # Tests del sistema ✨ NUEVO
-│   ├── test_api_costs.py
-│   ├── test_parser.py
-│   ├── test_cost_analyzer.py
-│   ├── test_two_methods.py
-│   └── ...
-│
-├── 📂 debug/                   # Scripts de depuración ✨ NUEVO
-│   ├── debug_parser.py
-│   ├── debug_solver.py
-│   ├── debug_for_costs.py
-│   └── ...
-│
-├── 📂 documentacion/           # Documentación técnica ✨ NUEVO
-│   ├── IMPLEMENTACION_AST.md
-│   ├── RESUMEN_COSTOS_POR_LINEA.md
-│   ├── GEMINI_TIMEOUT_RETRY.md
-│   ├── ENDPOINT_ANALYZE.md
-│   └── ...
-│
-├── 📂 docs/                    # Docs adicionales (ya existía)
-│   └── ejemplos/
-│
-└── 📂 tests/                   # Tests originales (pytest)
+└── 📂 tests/                   # Tests unitarios (pytest)
     ├── __init__.py
     └── test_psc_parser.py
 ```
 
-## 📊 Resumen de la Reorganización
+## 📊 Arquitectura del Sistema
 
-### ✅ Archivos Movidos
+### 🔧 Módulos Principales
 
-| Origen (raíz) | Destino | Cantidad |
-|--------------|---------|----------|
-| `ejemplo_*.py`, `demo_*.py`, `ejemplos_*.py` | `ejemplos/` | 9 archivos |
-| `test_*.py`, `verify_*.py`, `test_results*.txt` | `test/` | 31 archivos |
-| `debug_*.py`, `check_*.py` | `debug/` | 8 archivos |
-| `*.md` (excepto README.md) | `documentacion/` | 8 archivos |
+#### 1. **`app/modules/`** - Arquitectura de 4 Agentes
+Sistema modular con agentes independientes siguiendo el patrón de arquitectura de agentes:
 
-### 📂 Nueva Estructura
+- **`syntax_validator/`**: Valida y normaliza pseudocódigo
+- **`parser/`**: Convierte pseudocódigo a AST custom usando Lark
+- **`analyzer/`**: Analiza costos computacionales (genera sumatorias)
+- **`solver/`**: Resuelve sumatorias y calcula Big-O con SymPy
 
-#### 1. **`ejemplos/`** - Scripts de Demostración
-Contiene ejemplos de uso de cada componente del sistema.
+#### 2. **`app/api/`** - Endpoints REST
+- `POST /api/v1/analyze`: Endpoint principal de análisis completo
+- Detección automática de lenguaje natural vs pseudocódigo
+- Integración con Gemini API para normalización
 
-#### 2. **`test/`** - Suite de Pruebas
-Todos los tests organizados en un solo lugar.
+#### 3. **`app/services/`** - Servicios Externos
+- **Gemini Service**: Multi-key rotation, timeout/retry automático
+- Soporte para `gemini-2.5-flash` con manejo de cuota
 
-#### 3. **`debug/`** - Herramientas de Depuración
-Scripts para diagnosticar problemas específicos.
+#### 4. **`app/shared/`** - Recursos Compartidos
+- Modelos Pydantic para validación y serialización
+- Gramáticas Lark compartidas
 
-#### 4. **`documentacion/`** - Documentación Técnica
-Toda la documentación excepto el README principal.
+### 📁 Estructura Organizada
 
-## 🚀 Beneficios
+#### **`tests/`** - Tests Unitarios
+Suite de tests con pytest para validar funcionalidad del parser.
 
-### Antes (Raíz del Proyecto)
+## 🚀 Características Principales
+
+### ✅ Sistema Completo de Análisis de Algoritmos
 ```
-❌ 56+ archivos en la raíz
-❌ Difícil encontrar archivos específicos
-❌ Mezcla de código, tests, ejemplos y docs
+✅ Detección automática de lenguaje natural vs pseudocódigo
+✅ Normalización con Gemini API (GPT para pseudocódigo)
+✅ Validación sintáctica con Lark
+✅ Generación de AST custom optimizado
+✅ Análisis de costos por línea y por bloque
+✅ Resolución de sumatorias con pasos detallados
+✅ Cálculo de Big-O, Omega y Theta
+✅ API REST con FastAPI + Swagger UI
 ```
 
-### Después (Organizado)
+### 🔥 Ventajas de la Arquitectura
 ```
-✅ Solo 6 archivos en la raíz (main.py, README.md, etc.)
-✅ Fácil navegación por categorías
-✅ Estructura profesional y escalable
+✅ Modular: Cada agente es independiente y reutilizable
+✅ Testeable: Tests unitarios para cada componente
+✅ Escalable: Fácil agregar nuevos agentes o modificar existentes
+✅ Resiliente: Manejo de errores, timeouts y rotación de API keys
+✅ Documentado: Documentación completa de cada agente
 ```
 
-## 📖 Cómo Navegar
+## 📖 Guía Rápida
 
-### Para aprender a usar el proyecto:
+### Iniciar el servidor:
 ```bash
-cd ejemplos/
-# Ver ejemplos de uso
+python -m uvicorn main:app --reload --host localhost --port 8000
 ```
 
-### Para ejecutar tests:
+### Acceder a la documentación interactiva:
+```
+http://localhost:8000/docs
+```
+
+### Ejecutar tests:
 ```bash
-cd test/
-python test_cost_analyzer.py
+cd tests/
+pytest test_psc_parser.py -v
 ```
 
-### Para debug:
+### Probar endpoint:
 ```bash
-cd debug/
-python debug_parser.py
+# El servidor debe estar corriendo
+curl -X POST http://localhost:8000/api/v1/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"text": "ordenamiento burbuja"}'
 ```
 
-### Para leer documentación:
-```bash
-cd documentacion/
-# Abrir archivos .md
+## 🎯 Archivos en la Raíz
+
+- **`main.py`** - Punto de entrada de la aplicación FastAPI
+- **`README.md`** - Documentación principal del proyecto
+- **`requirements.txt`** - Dependencias del proyecto
+- **`.env`** - Variables de entorno (no versionado, usar `.env.example`)
+- **`.env.example`** - Plantilla de configuración
+- **`.gitignore`** - Archivos ignorados por Git
+
+## � Endpoints del API
+
+### POST `/api/v1/analyze`
+Endpoint principal que analiza algoritmos completos.
+
+**Input:**
+```json
+{
+  "text": "Ordena un arreglo usando burbuja",
+  "language_hint": "es"
+}
 ```
 
-## 🎯 Archivos que Permanecen en la Raíz
-
-- **`main.py`** - Punto de entrada de la aplicación
-- **`README.md`** - Documentación principal
-- **`requirements.txt`** - Dependencias
-- **`.env`** - Variables de entorno
-- **`.gitignore`** - Configuración de Git
-
-## 💡 Notas Importantes
-
-1. ✅ Cada carpeta nueva tiene su propio `README.md` explicativo
-2. ✅ Los imports en los scripts siguen funcionando (usan paths absolutos o relativos desde raíz)
-3. ✅ El `.gitignore` cubre todas las carpetas
-4. ✅ La estructura es estándar en proyectos Python
-
-## 🔄 Comandos de Ejecución
-
-### Desde cualquier ubicación:
-```bash
-# Ejemplos
-python ejemplos/ejemplo_cost_analyzer.py
-
-# Tests
-python test/test_parser.py
-
-# Debug
-python debug/debug_solver.py
+**Output:**
+```json
+{
+  "input_text": "...",
+  "validation": { ... },
+  "ast": { ... },
+  "costs": {
+    "per_line": [...],
+    "per_node": [...],
+    "total": { "best": "...", "avg": "...", "worst": "..." }
+  },
+  "solution": {
+    "exact": { "best": "n²+n-1", ... },
+    "big_o": { "best": "O(n²)", ... },
+    "bounds": { "omega": "Ω(n²)", "theta": "Θ(n²)", "big_o": "O(n²)" },
+    "steps_by_line": [...]
+  }
+}
 ```
 
-### Desde la carpeta específica:
-```bash
-cd ejemplos
-python ejemplo_cost_analyzer.py
-```
+## 💡 Tecnologías Utilizadas
+
+- **FastAPI**: Framework web moderno y rápido
+- **Lark**: Parser de gramáticas context-free
+- **SymPy**: Cálculo simbólico y resolución de sumatorias
+- **Pydantic**: Validación de datos y serialización
+- **Google Gemini API**: Normalización de lenguaje natural
+- **Python 3.11+**: Lenguaje base
 
 ## 📚 Referencias
 
-- [README Principal](README.md)
-- [Documentación](documentacion/README.md)
-- [Tests](test/README.md)
-- [Ejemplos](ejemplos/README.md)
-- [Debug](debug/README.md)
+- [Tests Unitarios](tests/)
+- [Swagger UI](http://localhost:8000/docs) - Documentación interactiva del API
+- [README Principal](README.md) - Información general del proyecto

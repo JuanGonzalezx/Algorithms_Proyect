@@ -232,7 +232,11 @@ class PseudocodeToASTTransformer(Transformer):
         # Construir árbol binario izquierda-asociativo
         result = children[0]
         for i in range(1, len(children)):
-            result = BinOp(op="or", left=result, right=children[i])
+            child = children[i]
+            # Filtrar tokens "or"/"o" que puedan venir mezclados
+            if isinstance(child, Token):
+                continue
+            result = BinOp(op="or", left=result, right=child)
         return result
     
     def and_expr(self, children):
@@ -242,7 +246,11 @@ class PseudocodeToASTTransformer(Transformer):
         
         result = children[0]
         for i in range(1, len(children)):
-            result = BinOp(op="and", left=result, right=children[i])
+            child = children[i]
+            # Filtrar tokens "and"/"y" que puedan venir mezclados
+            if isinstance(child, Token):
+                continue
+            result = BinOp(op="and", left=result, right=child)
         return result
     
     def not_expr(self, children):

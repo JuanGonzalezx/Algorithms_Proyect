@@ -73,23 +73,12 @@ class SeriesSolver:
         # NO generar el análisis por bloques (steps), solo el análisis por línea
         steps = []
         
-        # Calcular exact desde la suma de TODAS las líneas (incluyendo For/While)
-        # Esto asegura que exact coincida con el análisis por línea
-        if per_line_costs:
-            # Sumar los costos de todas las líneas para cada caso
-            best_sum = " + ".join([f"({lc.cost.best})" for lc in per_line_costs])
-            avg_sum = " + ".join([f"({lc.cost.avg})" for lc in per_line_costs])
-            worst_sum = " + ".join([f"({lc.cost.worst})" for lc in per_line_costs])
-            
-            # Resolver las sumas
-            best_exact, _ = self._solve_expression_with_steps(best_sum, "best", 1)
-            avg_exact, _ = self._solve_expression_with_steps(avg_sum, "avg", 1)
-            worst_exact, _ = self._solve_expression_with_steps(worst_sum, "worst", 1)
-        else:
-            # Fallback: usar el análisis por bloques si no hay per_line_costs
-            best_exact, _ = self._solve_expression_with_steps(cost_expr.best, "best", 1)
-            avg_exact, _ = self._solve_expression_with_steps(cost_expr.avg, "avg", 1)
-            worst_exact, _ = self._solve_expression_with_steps(cost_expr.worst, "worst", 1)
+        # IMPORTANTE: Usar el cost_expr.total que ya tiene las sumatorias correctas
+        # NO usar per_line_costs directamente porque pueden tener variables libres (como 'i')
+        # que no están envueltas en sumatorias
+        best_exact, _ = self._solve_expression_with_steps(cost_expr.best, "best", 1)
+        avg_exact, _ = self._solve_expression_with_steps(cost_expr.avg, "avg", 1)
+        worst_exact, _ = self._solve_expression_with_steps(cost_expr.worst, "worst", 1)
         
         # Generar SOLO la solución línea por línea (este es el método solicitado)
         steps_by_line = []

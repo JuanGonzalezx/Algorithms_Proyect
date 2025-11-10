@@ -21,8 +21,8 @@ from app.services.gemini_service import gemini_service
 
 logger = logging.getLogger(__name__)
 
-# Router principal
-router = APIRouter(prefix="/api/v1", tags=["agents"])
+# Router principal (sin prefijo, se agrega en main.py)
+router = APIRouter(tags=["agents"])
 
 
 # ============================================================================
@@ -469,17 +469,81 @@ async def analyze_complete(pseudocode: PseudocodeIn) -> CompleteAnalysisResult:
             logger.info(f"✓ [2/4] AST generado ({ast_result.metadata.get('functions', 0)} funciones)")
             
         except Exception as parse_error:
-            logger.error(f"Error al parsear: {parse_error}")
-            ast_result = ASTResult(
-                success=False,
-                ast=None,
-                metadata={},
-                error=str(parse_error)
-            )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Error al parsear el código: {str(parse_error)}"
-            )
+            logger.error(f"❌ Error al parsear: {parse_error}")
+            
+            # Si el parser falla y aún NO hemos intentado normalizar con Gemini, hacerlo ahora
+            if not is_natural_language:
+                logger.info("🔄 Código con errores de sintaxis - Intentando normalizar con Gemini...")
+                logger.info(f"   Código original: {input_text[:100]}...")
+                try:
+                    # Normalizar el código con Gemini
+                    normalized_pseudocode = await gemini_service.normalize_to_pseudocode(
+                        input_text,
+                        hint="Este código tiene errores de sintaxis. Por favor corrígelo y devuélvelo en pseudocódigo válido."
+                    )
+                    logger.info(f"✓ Código normalizado con Gemini ({len(normalized_pseudocode)} caracteres)")
+                    logger.info(f"   Código normalizado: {normalized_pseudocode[:100]}...")
+                    
+                    # Volver a validar
+                    pseudocode.text = normalized_pseudocode
+                    validation = validator.validate(pseudocode)
+                    
+                    # Volver a parsear con el código corregido
+                    try:
+                        ast_obj = parser.parse(validation.codigo_corregido)
+                        
+                        ast_result = ASTResult(
+                            success=True,
+                            ast=ast_obj.to_dict(),
+                            metadata={
+                                "functions": len(ast_obj.functions) if hasattr(ast_obj, 'functions') else 0,
+                                "total_nodes": sum(
+                                    len(func.body.statements) if hasattr(func, 'body') else 0
+                                    for func in (ast_obj.functions if hasattr(ast_obj, 'functions') else [])
+                                ),
+                                "normalized_by_gemini": True
+                            }
+                        )
+                        
+                        logger.info("✓ [2/4] AST generado exitosamente después de normalización")
+                        
+                    except Exception as second_parse_error:
+                        logger.error(f"❌ Fallo al parsear incluso después de normalización: {second_parse_error}")
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"El código no pudo ser parseado incluso después de normalización: {str(second_parse_error)}"
+                        )
+                        
+                except Exception as gemini_error:
+                    logger.error(f"❌ Error al normalizar con Gemini: {gemini_error}")
+                    logger.error(f"   Tipo de error: {type(gemini_error).__name__}")
+                    import traceback
+                    logger.error(f"   Traceback: {traceback.format_exc()}")
+                    
+                    # Extraer información del error
+                    gemini_error_msg = str(gemini_error)
+                    
+                    # Si es una HTTPException, extraer el detalle
+                    if isinstance(gemini_error, HTTPException):
+                        gemini_error_msg = str(gemini_error.detail) if hasattr(gemini_error, 'detail') else "Error HTTP en Gemini"
+                    
+                    # Si Gemini también falla, devolver el error original del parser
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail={
+                            "message": "Error al parsear el código",
+                            "parse_error": str(parse_error),
+                            "normalization_failed": gemini_error_msg if gemini_error_msg else "Error desconocido en Gemini",
+                            "gemini_error_type": type(gemini_error).__name__,
+                            "suggestion": "Verifica la sintaxis del pseudocódigo o proporciona una descripción en lenguaje natural"
+                        }
+                    )
+            else:
+                # Ya intentamos con Gemini y aún falló
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Error al parsear el código normalizado: {str(parse_error)}"
+                )
         
         # PASO 3: Analizar costos
         logger.info("[3/4] Analizando costos...")

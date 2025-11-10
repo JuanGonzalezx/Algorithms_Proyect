@@ -107,10 +107,14 @@ class GeminiService:
         logger.error("❌ Todas las API keys han excedido su cuota")
         return False
 
-    async def normalize_to_pseudocode(self, natural_language: str) -> str:
+    async def normalize_to_pseudocode(self, natural_language: str, hint: str = None) -> str:
         """
         Convierte descripción en lenguaje natural a pseudocódigo estructurado
         siguiendo la gramática definida en el proyecto.
+        
+        Args:
+            natural_language: Texto en lenguaje natural o código con errores
+            hint: Instrucción adicional para el modelo (opcional)
         """
         # ¡OJO!: llaves literales como {{atributos}} para que no fallen los f-strings
         prompt = f"""
@@ -157,6 +161,12 @@ SINTAXIS OBLIGATORIA:
 
 7. ARRAYS: A[i] o A[1..n]
 
+8. OPERADORES LÓGICOS: Siempre en minúsculas
+   - and (conjunción)
+   - or (disyunción)
+   - not (negación)
+   Ejemplo: if (i > 0 and i < n) then
+
 EJEMPLOS CORRECTOS:
 
 Ejemplo 1 - Burbuja:
@@ -192,22 +202,50 @@ begin
     return -1
 end
 
+Ejemplo 3 - Inserción (con operador lógico):
+insercion(A, n)
+begin
+    for i {ARROW} 2 to n do
+    begin
+        clave {ARROW} A[i]
+        j {ARROW} i - 1
+        while (j > 0 and A[j] > clave) do
+        begin
+            A[j+1] {ARROW} A[j]
+            j {ARROW} j - 1
+        end
+        A[j+1] {ARROW} clave
+    end
+end
+
 ERRORES COMUNES A EVITAR:
 ❌ NUNCA escribir "repeat" sin "begin" después
 ❌ NUNCA omitir "begin...end" en loops o condicionales
 ❌ NUNCA usar ":" para asignaciones (usar {ARROW})
 ❌ NUNCA mezclar español e inglés en palabras clave
-
+❌ NUNCA usar AND/OR/NOT en MAYÚSCULAS (usar: and, or, not en minúsculas)
+"""
+        
+        # Agregar hint si se proporciona
+        if hint:
+            prompt += f"\n{hint}\n"
+        
+        prompt += f"""
 AHORA CONVIERTE:
 {natural_language}
 
 RESPUESTA (solo pseudocódigo, sin explicaciones, sin markdown, sin ```):
 """
         try:
+            logger.info(f"📤 Enviando a Gemini... (prompt: {len(prompt)} chars)")
             raw = await self._generate_content(prompt)
+            logger.info(f"📥 Respuesta de Gemini recibida: {len(raw)} chars")
             return raw
         except Exception as e:
-            logger.error(f"Error al normalizar con Gemini: {e}")
+            logger.error(f"❌ Error al normalizar con Gemini: {e}")
+            logger.error(f"   Tipo: {type(e).__name__}")
+            import traceback
+            logger.error(f"   Traceback: {traceback.format_exc()}")
             raise Exception(f"Error en la normalización: {str(e)}")
 
     async def generate_python_code(self, natural_language: str) -> str:
