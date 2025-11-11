@@ -2,7 +2,7 @@
 from pathlib import Path
 from typing import List
 from lark import Lark, Transformer, Tree, Token, v_args
-from app.models.ast_nodes import (
+from app.services.ast_nodes import (
     Program, Function, Param, Block,
     Assign, If, While, For, Return, ExprStmt,
     Var, Literal, BinOp, UnOp, Compare, Call, ArrayAccess,

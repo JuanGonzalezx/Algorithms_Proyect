@@ -7,7 +7,7 @@ import uvicorn
 import logging
 
 from app.api.routes import router as agent_router
-from app.controllers.analyzer_controller import router as analyzer_router
+from app.api.analyzer_controller import router as analyzer_router
 from app.config.settings import settings
 
 # Configurar logging

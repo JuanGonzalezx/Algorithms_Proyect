@@ -2,7 +2,7 @@
 from typing import Dict, List, Tuple
 import sympy as sp
 from sympy import sympify, simplify
-from app.models.ast_nodes import (
+from app.services.ast_nodes import (
     Program, Function, Block, Stmt,
     For, While, If, Assign, Return, ExprStmt,
     Expr, Var, Literal, BinOp, Compare
