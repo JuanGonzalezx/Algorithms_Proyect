@@ -22,9 +22,9 @@ Este documento describe la estructura actual del proyecto **Analizador de Comple
    ├─ modules/
    │  ├─ __init__.py
    │  ├─ analyzer/
-   │  │  └─ ... (agente de costos)
+   │  │  └─ ... (costos)
    │  ├─ parser/
-   │  │  └─ ... (agente parser)
+   │  │  └─ ... (parser)
    │  ├─ solver/
    │  │  └─ ... (solver de series)
    │  └─ syntax_validator/
@@ -47,7 +47,7 @@ Este documento describe la estructura actual del proyecto **Analizador de Comple
 
 ---
 
-## Flujo de alto nivel (pipeline de agentes)
+## Flujo de alto nivel (pipeline)
 
 1. **syntax_validator** (`app/modules/syntax_validator`): normaliza y valida el pseudocódigo.
 2. **parser** (`app/modules/parser`): convierte el pseudocódigo válido a **AST/IR** (usando la gramática `shared/grammar/pseudocode.lark`).
@@ -78,13 +78,13 @@ El **API** orquesta este pipeline desde `app/api/routes.py` en los endpoints `/a
   - Marca el paquete.
 
 - **`routes.py`**
-  - **Endpoint principal de agentes** (documentado en Swagger):
+  - **Endpoint principales** (documentado en Swagger):
     - `POST /api/v1/validate-syntax` → usa `syntax_validator`
     - `POST /api/v1/parse` → usa `parser`
     - `POST /api/v1/costs` → usa `analyzer`
     - `POST /api/v1/solve` → usa `solver`
     - `POST /api/v1/analyze` → **pipeline completo** (NL → Pseudocódigo → AST → Costos → Big-O)
-  - `GET /api/v1/health` para health-check de agentes.
+  - `GET /api/v1/health` para health-check.
 
 - **`analyzer_controller.py`**
   - Endpoints utilitarios para integración con LLM (Gemini) y AST directo:
@@ -106,12 +106,12 @@ El **API** orquesta este pipeline desde `app/api/routes.py` en los endpoints `/a
 
 ---
 
-### `app/modules/` (agentes)
+### `app/modules/`
 - **`__init__.py`**
   - Paquete.
 
 - **`analyzer/`**
-  - Implementa el **Cost Analyzer** (p. ej. `agent.py` / `cost_model.py`):
+  - Implementa el **Cost Analyzer** (p. ej. `validador.py` / `cost_model.py`):
     - Reglas de costo por nodo (For/While/If/Assign…).
     - Generación de costos **por nodo** y **por línea**.
     - Exporta `get_cost_analyzer()`.
@@ -145,8 +145,8 @@ El **API** orquesta este pipeline desde `app/api/routes.py` en los endpoints `/a
   - Cada nodo implementa `to_dict()` para serialización.
 
 - **`ast_service.py`**
-  - Utilidades para construir/serializar AST fuera del flujo de agentes.
-  - **Nota**: Si `routes.py` ya orquesta todo con los agentes, este módulo puede considerarse **de soporte** o **legacy**.
+  - Utilidades para construir/serializar AST fuera del flujo.
+  - **Nota**: Si `routes.py` ya orquesta todo, este módulo puede considerarse **de soporte** o **legacy**.
 
 - **`gemini_service.py`**
   - Cliente para Gemini (normalización de pseudocódigo y generación de código).

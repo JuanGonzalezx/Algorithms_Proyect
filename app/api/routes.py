@@ -14,7 +14,7 @@ from app.shared.models import (
     SolveOut,
     CompleteAnalysisResult,
 )
-from app.modules.syntax_validator.agent import get_syntax_validator
+from app.modules.syntax_validator.validador import get_syntax_validator
 from app.modules.parser.service import get_parser_agent
 from app.modules.analyzer.cost_model import get_cost_analyzer          # ← path corregido
 from app.modules.solver.solver import get_series_solver     # ← path corregido
@@ -377,7 +377,7 @@ async def analyze_complete(pseudocode: PseudocodeIn) -> CompleteAnalysisResult:
     "/health",
     status_code=status.HTTP_200_OK,
     summary="Health check",
-    description="Verifica el estado del servicio y los agentes.",
+    description="Verifica el estado del servicio.",
 )
 async def health_check() -> Dict[str, Any]:
     try:

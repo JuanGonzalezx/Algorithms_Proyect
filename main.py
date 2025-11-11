@@ -1,5 +1,5 @@
 """
-Aplicación FastAPI principal con arquitectura modular basada en agentes.
+Aplicación FastAPI principal
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # Crear aplicación FastAPI
 app = FastAPI(
     title="Analizador de Complejidades Algorítmicas",
-    description="Sistema inteligente para análisis de complejidad computacional de algoritmos en pseudocódigo, asistido por LLMs y agentes especializados",
+    description="Sistema inteligente para análisis de complejidad computacional de algoritmos en pseudocódigo, asistido por LLMs",
     version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
